@@ -1,7 +1,7 @@
 # Ignore everything in the public directory
 public/*
 
-# Ignore everything in the list directory
+# Ignore everything in the dist directory
 dist/*
 
 # Dependencies
@@ -15,7 +15,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Runtime data
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
@@ -51,19 +51,25 @@ bower_components/
 # dotenv environment variables file
 .env
 .env.test
+.env.local
+.env.development
+.env.production
+.env.staging
 
 # Next.js build output
 .next/
 
 # Nuxt.js build / generate output
 .nuxt/
-dist/
 
 # Gatsby files
 .cache/
 
-
-
-# Misc
+# Miscellaneous
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.swp
+*~
+.nyc_output
