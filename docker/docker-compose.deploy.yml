@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  reverse-proxy:
+    restart: unless-stopped
+    image: traefik:v2.9
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencryptresolver.acme.email=ivan.k.pedroza@gmail.com
+      - --certificatesresolvers.letsencryptresolver.acme.storage=./data/acme.json
+      - --certificatesresolvers.letsencryptresolver.acme.tlschallenge=true
+      # - --certificatesresolvers.letsencryptresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The HTTPS port
+      - 443:443
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Needed for LetsEncrypt
+      - "./acme.json/:/data/"
+
+  # whoami:
+  #   # A container that exposes an API to show its IP address
+  #   image: traefik/whoami
+  #   labels:
+  #     - "traefik.http.routers.whoami.rule=Host(`whoami.one2one.sierasolutions.com`)"
+  #     - "traefik.http.routers.whoami.tls=true"
+  #     - "traefik.http.routers.whoami.tls.certresolver=letsencryptresolver"
+
+  app:
+    container_name: CareerDocumentsAPI
+    image: ivanpedroza/career_documents_api:latest
+    tty: true
+    stdin_open: true
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - SEQ_API_KEY
+      - NODE_ENV
+    labels:
+      - "traefik.http.routers.app.rule=(Host(`api.one2one.sierasolutions.com`))"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app.tls.certresolver=letsencryptresolver"
+    depends_on:
+      - seq
+
+  seq:
+    image: datalust/seq:latest
+    container_name: seqhc    
+    restart: unless-stopped
+    volumes:
+      - seqhc_data:/data
+    ports:
+      - 5341:5341
+    environment:
+      - ACCEPT_EULA=Y
+    labels:
+      - "traefik.http.routers.seq.rule=Host(`seq.one2one.sierasolutions.com`)"
+      - "traefik.http.routers.seq.tls=true"
+      - "traefik.http.routers.seq.tls.certresolver=letsencryptresolver"
+
+volumes:
+  seqhc_data:
+  acme:

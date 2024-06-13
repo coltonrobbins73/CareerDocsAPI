@@ -16,30 +16,28 @@ import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
 import { generateCoverLetterPrompt } from '../prompts/coverLetterPrompt';
 import ReactPDF from '@react-pdf/renderer';
+import {fetchListing} from '../utils/jobs';
 
 dotenv.config();
 
 
 
-const jobListing : string= StringifyTxt("public/job_listing.txt");
 const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
 
-const generateLetter = async () => {
+const generateLetter = async ({url}: {url: string}) => {
     // Generate job summary
-    const jobListingPrompt = generateJobListingPrompt(jobListing);
+    const jobListingPrompt = generateJobListingPrompt( await fetchListing(url));
     const jobSummary = await openAiClient([
         { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
         { role: "user", content: jobListingPrompt }
     ]);
     console.log(jobSummary);
-
     // Generate resume summary
     const resumePrompt = generateResumePrompt(resume);
     const resumeSummary = await openAiClient([
         { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
         { role: "user", content: resumePrompt }
     ]);
-    console.log(resumeSummary);
 
   //   // Split resume summary to extract contact info
   //   const pattern = "Previous work experience";
@@ -63,19 +61,18 @@ const generateLetter = async () => {
     { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
   ]);
 
+  console.log('hook:', hook);
 
   body = await openAiClient([
     { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
     { role: "user", content: generateCoverLetterPrompt(resumeSummary, jobSummary, hook) }
   ]);
 
+  const parts = body.split(/(?=Thank you)/);
 
-  const outputFilePath = "dist/cover_letterz.pdf";
-  const content = `Dear Hiring Manager, ${hook} ${body} Sincerely, Ivan Pedroza`;
+  const outputFilePath = "dist/cover_letter.pdf";
 
-  console.log("FINAL CONTENT", content);
-  
-  ReactPDF.render(writeCoverLetterPDF({hook, body}), outputFilePath);
+  return writeCoverLetterPDF({ hook: hook, body: parts[0] || "", closing: parts[1] || "" });
 };
 
 
@@ -91,7 +88,7 @@ const generateLetter = async () => {
 const pdfEndpoint = new EndpointsFactory(
   createResultHandler({
     getPositiveResponse: () => ({
-      schema: ez.file("buffer"),
+      schema: z.instanceof(Buffer),
       mimeType: "application/pdf",
     }),
     getNegativeResponse: () => ({ schema: z.string(), mimeType: "text/plain" }),
@@ -100,9 +97,12 @@ const pdfEndpoint = new EndpointsFactory(
         response.status(500).send(error.message);
         return;
       }
-      if (output && typeof output.filename === 'string') {
-        const filename = output.filename;
-        fs.createReadStream(filename).pipe(response.type('application/pdf'));
+      if (output && output.file) {
+        const pdfBuffer = output.file as Buffer; // Ensure that output.file is treated as a Buffer
+        response
+          .status(200)
+          .type('application/pdf')
+          .send(pdfBuffer);
       } else {
         response.status(400).send("No file found");
       }
@@ -111,10 +111,22 @@ const pdfEndpoint = new EndpointsFactory(
 );
 
 // Endpoint to fetch resume
+const job = pdfEndpoint.build({
+  shortDescription: "fetches job listing",
+  description: 'retrieves text from job listing',
+  method: 'post',
+  input: z.object({ url: z.string() }),
+  output: z.object({ text: z.string() }),
+  handler: async ({ input: { url } }) => {
+    return { text: ((await fetchListing(url))) };
+  },
+});
+
+// Endpoint to fetch resume
 const resumeEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches resume files",
   description: 'Retrieves most up-to-date resume',
-  method: 'get',
+  method: 'post',
   input: z.object({ name: z.string().optional() }),
   output: z.object({ filename: z.string() }),
   handler: async ({ input: { name }, logger }) => {
@@ -123,21 +135,20 @@ const resumeEndpoint = pdfEndpoint.build({
   },
 });
 
-// Endpoint to fetch cover letter
 const coverLetterEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches cover letter files",
   description: 'Retrieves most up-to-date general cover letter',
-  method: 'get',
-  input: z.object({ name: z.string().optional() }),
-  output: z.object({ filename: z.string() }),
-  handler: async ({ input: { name }, logger }) => {
-    await generateLetter();
-    const filePath = `public/Cover Letter.pdf`;
-    return { filename: filePath };
+  method: 'post',
+  input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
+  output: z.object({ file: z.instanceof(Buffer) }),
+  handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
+    const pdfBuffer = await generateLetter({ url: jobUrl });
+    return { file: pdfBuffer };
   },
 });
 
 export const appRouter: Routing = {
+  job: job,
   resume: resumeEndpoint,
-  coverLetter: coverLetterEndpoint,
+  cover: coverLetterEndpoint,
 };

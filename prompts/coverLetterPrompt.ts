@@ -16,6 +16,6 @@ export const generateCoverLetterPrompt = (resumeSummary: string, jobSummary: str
     Hook: ${hook}
 
     expected_output:
-    2 paragraph cover letter body and 1 paragraph conclusion with a strong focus on the company's future needs and how the applicant can fulfill those needs.
+    2 paragraph cover letter body and 1 paragraph conclusion with a strong focus on the company's future needs and how the applicant can fulfill those needs. The conclusion paragraph should start with "thank you for taking the time to review my aplication".
     Do not include explanations, reasoning, or additional commentary.
 `);

@@ -29,5 +29,5 @@ export const generateResumePrompt = (resume: string) => dedent(`
     # ... more work experiences as needed
     ]
 
-    Do not include explanations, reasoning, or additional commentary.
+    Do not include explanations, reasoning, or additional commentary and make sure the company names are Capitalized correctly.
 `);

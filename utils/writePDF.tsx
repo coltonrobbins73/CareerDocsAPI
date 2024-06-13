@@ -1,5 +1,17 @@
-import React, { ReactElement } from 'react';
-import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
+import React from 'react';
+import fs from 'fs';
+import path from 'path';
+import { Page, Text, View, Document, StyleSheet, Image, Font, renderToBuffer } from '@react-pdf/renderer';
+
+// Register the variable font
+Font.register({
+  family: 'EB Garamond',
+  fonts: [
+    { src: 'public/fonts/EBGaramond-Regular.ttf', fontWeight: 400 },
+    { src: 'public/fonts/EBGaramond-Bold.ttf', fontWeight: 700 },
+    { src: 'public/fonts/EBGaramond-Italic.ttf', fontStyle: 'italic' },
+  ]
+});
 
 // Constants for styling
 const pageMargin = 35;
@@ -7,139 +19,142 @@ const footerHeight = 50;
 const fontColorPrimary = '#000';
 const fontColorSecondary = '#666';
 
-
 // Create styles
 const styles = StyleSheet.create({
   page: {
     fontSize: 10,
     padding: pageMargin,
     paddingBottom: footerHeight,
-    fontFamily: 'Helvetica',
+    fontFamily: 'EB Garamond',
     color: fontColorPrimary
   },
-  container: {
-    margin: 10,
-    border: 0.5,
-    borderColor: 'black',
-    height: 135,
-    justifyContent: 'flex-start',
+  header: {
+    marginBottom: 20
+  },
+  contactInfo: {
+    marginBottom: 10
+  },
+  date: {
+    marginBottom: 20
+  },
+  address: {
+    marginBottom: 20
   },
   title: {
     fontSize: 12,
     fontWeight: 'bold',
-    paddingLeft: 20,
-    paddingBottom: 10
+    marginBottom: 10
   },
-  subtitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    paddingLeft: 20,
-  },
-  logo: {
-    display: 'flex',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    margin: 0,
-    width: 150,
-    height: 40,
-    paddingBottom: 15
-  },  
-  text: {
-    marginLeft: 10,
-    paddingBottom: 2,
-  },
-  date: {
-    padding: 10 ,
-    fontSize: 15,
-    fontWeight: 'bold',
+  body: {
+    marginBottom: 20
   },
   paragraph: {
-    paddingLeft: 20,
+    marginBottom: 10
   },
-  inLineContainer: {
-    flexDirection: 'row', // This makes the children (View and Text) align horizontally
-    alignItems: 'center', // This centers the children vertically in the container
-    justifyContent: 'flex-start', // This makes the children spread out in the container
+  signature: {
+    marginTop: 20
   },
-  checkboxSection: {
+  table: {
     display: 'flex',
+    width: 'auto',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  tableRow: {
     flexDirection: 'row',
-    margin: 10,
-    alignItems: 'center'
   },
-  parenthesisText: {
-    marginLeft: 10,
-    marginBottom: 5,
-    fontSize: 6,
-    color: fontColorSecondary
+  tableCol: {
+    width: '50%',
+    borderStyle: 'solid',
+    borderWidth: 1,
+    borderColor: '#000',
   },
-  checkbox: {
-    width: 10,
-    height: 10,
-    border: '1px solid black',
-    marginRight: 5
-  },
-  checkboxLabel: {
-    fontSize: 10
-  },
-  underline: {
-    flex: 1, // Take up all available space
-    height: 0.5, // Height of the underline to represent the signature line
-    backgroundColor: 'black', // Color of the underline
-    marginRight: 20,
-    marginLeft: 10,
-    justifyContent: 'flex-end',
-    lineHeight: 24,
+  tableCell: {
+    margin: 5,
+    fontSize: 10,
   }
 });
 
-const generateDate =  () => {
-  const currentDate = new Date();
-  const formattedDate = currentDate.toISOString().split('T')[0];
-  return formattedDate;
+export const writeCoverLetterPDF = async ({hook, body, closing}: {hook: string, body: string, closing: string}): Promise<Buffer> => {
+  try {
+      const pdfDocument = generatePDFDocument({ hook, body, closing });
+      const pdfBuffer = await renderToBuffer(pdfDocument);
+      return pdfBuffer;
+  } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw error;
+  }
 };
 
-const Container = ({ children, height, justify }: { children: ReactElement | ReactElement[], height?: number, justify?: "flex-start" | "flex-end" | "center" | "space-around" | "space-between" | "space-evenly" | undefined }) => (
-  <View style={{ ...styles.container, height: height || styles.container.height, justifyContent: justify || styles.container.justifyContent }}>
-    {children}
-  </View>
-);
-
-const Title = ({ text }: { text: string }) => (
-    <View style={styles.title}>
-        <Text>{text}</Text>
-    </View>
-);
-
-const SubTitle = ({ text }: { text: string }) => (
-    <View style={styles.subtitle}>
-        <Text>{text}</Text>
-    </View>
-);
-
-const Paragraph = ({ children }: { children: string | string[] }) => (
-    <View style={styles.paragraph}>
-        <Text>{children}</Text>
-    </View>
-)
-
-const Gap = () => (
-    <View style={{ marginTop: 10, marginBottom: 10 }}></View>
-)
-
-
-// Create Document Component
-export const writeCoverLetterPDF = ({hook, body}: {hook: string, body: string})=> (
+ const generatePDFDocument = ({hook, body, closing}: {hook: string, body: string, closing: string})  => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <Text>Dear Hiring Manager</Text>
-      <Gap />
-      <Paragraph>{hook}</Paragraph>
-      <Gap />
-      <Paragraph>{body}</Paragraph>
-      <Gap />
-      <Text>Sincerely,</Text>
-      <Text>Ivan Pedroza</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Ivan Pedroza</Text>
+        <Text>Seattle, WA 98107</Text>
+        <Text>(208) 590-5361</Text>
+        <Text>Ivan.k.pedroza@gmail.com</Text>
+      </View>
+      <View style={styles.date}>
+        <Text>14 November 2023</Text>
+      </View>
+      <View style={styles.address}>
+        <Text>88 Colin P. Kelly Jr. Street</Text>
+        <Text>San Francisco, CA 94107</Text>
+      </View>
+      <View style={styles.paragraph}>
+        <Text>To Whom It May Concern:</Text>
+      </View>
+      <View style={styles.body}>
+        <View style={styles.paragraph}>
+          <Text>{hook}</Text>
+        </View>
+        <View style={styles.paragraph}>
+          <Text>
+            {body}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.table}>
+        <View style={styles.tableRow}>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>You Want:</Text>
+          </View>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>I Bring:</Text>
+          </View>
+        </View>
+        <View style={styles.tableRow}>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>3+ years of software engineering experience. 2+ years of experience with Git & GitHub</Text>
+          </View>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>A Master’s in Computer Science, 2 years of experience using Git and GitHub.</Text>
+          </View>
+        </View>
+        <View style={styles.tableRow}>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>Strong 3+ years of experience developing & debugging large scale projects, applications or developer tools. 3+ years of experience interfacing with RESTful APIs & OAuth Workflows.</Text>
+          </View>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>4 years of experience developing large scale solutions for manufacturing and bioinformatics pipelines. Experience interfacing with government database APIs.</Text>
+          </View>
+        </View>
+        <View style={styles.tableRow}>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>Strong communication/interpersonal skills both written & verbal. You will write, review & maintain code & technical documentation.</Text>
+          </View>
+          <View style={styles.tableCol}>
+            <Text style={styles.tableCell}>Proficient in crafting scientific papers for publication and effectively conveying experimental findings on groundbreaking molecular research to collaborating labs and stakeholders.</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.signature}>
+        <Text>{closing + "\n"}</Text>
+        <Text>Sincerely,</Text>
+        <Text>Ivan Pedroza</Text>
+      </View>
     </Page>
   </Document>
 );
+

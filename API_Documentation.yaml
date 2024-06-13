@@ -3,54 +3,89 @@ info:
   title: Document Service API
   version: 1.0.0
 paths:
-  /resume:
-    get:
-      operationId: GetResume
-      summary: Fetches resume files
-      description: Retrieves most up-to-date resume
-      parameters:
-        - name: name
-          in: query
-          required: false
-          description: GET /resume Parameter
-          schema:
-            type: string
+  /job:
+    post:
+      operationId: PostJob
+      summary: fetches job listing
+      description: retrieves text from job listing
+      requestBody:
+        description: POST /job Request body
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+              required:
+                - url
       responses:
         "200":
-          description: GET /resume Positive response
+          description: POST /job Positive response
           content:
             application/pdf:
               schema:
-                type: string
-                format: binary
+                format: any
         "400":
-          description: GET /resume Negative response
+          description: POST /job Negative response
           content:
             text/plain:
               schema:
                 type: string
-  /coverLetter:
-    get:
-      operationId: GetCoverLetter
-      summary: Fetches cover letter files
-      description: Retrieves most up-to-date general cover letter
-      parameters:
-        - name: name
-          in: query
-          required: false
-          description: GET /coverLetter Parameter
-          schema:
-            type: string
+  /resume:
+    post:
+      operationId: PostResume
+      summary: Fetches resume files
+      description: Retrieves most up-to-date resume
+      requestBody:
+        description: POST /resume Request body
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
       responses:
         "200":
-          description: GET /coverLetter Positive response
+          description: POST /resume Positive response
           content:
             application/pdf:
               schema:
-                type: string
-                format: binary
+                format: any
         "400":
-          description: GET /coverLetter Negative response
+          description: POST /resume Negative response
+          content:
+            text/plain:
+              schema:
+                type: string
+  /cover:
+    post:
+      operationId: PostCover
+      summary: Fetches cover letter files
+      description: Retrieves most up-to-date general cover letter
+      requestBody:
+        description: POST /cover Request body
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                jobUrl:
+                  type: string
+              required:
+                - jobUrl
+      responses:
+        "200":
+          description: POST /cover Positive response
+          content:
+            application/pdf:
+              schema:
+                format: any
+        "400":
+          description: POST /cover Negative response
           content:
             text/plain:
               schema:
