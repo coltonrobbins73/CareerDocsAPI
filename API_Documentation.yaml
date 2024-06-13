@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: Document Service API
+  version: 1.0.0
+paths:
+  /resume:
+    get:
+      operationId: GetResume
+      summary: Fetches resume files
+      description: Retrieves most up-to-date resume
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: GET /resume Parameter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: GET /resume Positive response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: GET /resume Negative response
+          content:
+            text/plain:
+              schema:
+                type: string
+  /coverLetter:
+    get:
+      operationId: GetCoverLetter
+      summary: Fetches cover letter files
+      description: Retrieves most up-to-date general cover letter
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: GET /coverLetter Parameter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: GET /coverLetter Positive response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: GET /coverLetter Negative response
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas: {}
+  responses: {}
+  parameters: {}
+  examples: {}
+  requestBodies: {}
+  headers: {}
+  securitySchemes: {}
+  links: {}
+  callbacks: {}
+tags: []
+servers:
+  - url: http://localhost:3000
