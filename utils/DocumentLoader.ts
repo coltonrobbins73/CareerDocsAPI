@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import mammoth from 'mammoth';
 import pdf from 'pdf-parse';
 import deasync from 'deasync';
 
