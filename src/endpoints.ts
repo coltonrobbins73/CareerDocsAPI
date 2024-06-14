@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import fs from 'fs';
 import url from 'url';
+import path from 'path'; // Import the path module
 import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFactory } from 'express-zod-api';
 import e, { Request, Response, NextFunction } from 'express';
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
@@ -14,12 +15,21 @@ import { writeCoverLetterPDF } from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
-import { generateCoverLetterPrompt } from '../prompts/coverLetterPrompt';
+import { generateBodyPrompt } from '../prompts/bodyPrompt';
+import { generateReviewPrompt } from '../prompts/reviewPrompt';
+import { generateConclusionPrompt } from '../prompts/conclusionPrompt';
+import { generateFinalPrompt } from '../prompts/truthPrompt';
 import ReactPDF from '@react-pdf/renderer';
 import {fetchListing} from '../utils/jobs';
 
 dotenv.config();
 
+// --- Persona Definitions ---
+const talentAcquisitionExpertPersona : string = `You are an expert in talent acquisition \
+and workforce optimization with 20 years of experience summarizing job descriptions.`;
+
+const coverLetterWriterPersona : string = `You are an expert cover letter writer with a \
+comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
 const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
@@ -28,14 +38,14 @@ const generateLetter = async ({url}: {url: string}) => {
     // Generate job summary
     const jobListingPrompt = generateJobListingPrompt( await fetchListing(url));
     const jobSummary = await openAiClient([
-        { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
+        { role: "system", content: talentAcquisitionExpertPersona },
         { role: "user", content: jobListingPrompt }
     ]);
     console.log(jobSummary);
     // Generate resume summary
     const resumePrompt = generateResumePrompt(resume);
     const resumeSummary = await openAiClient([
-        { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
+        { role: "system", content: talentAcquisitionExpertPersona },
         { role: "user", content: resumePrompt }
     ]);
 
@@ -55,24 +65,49 @@ const generateLetter = async ({url}: {url: string}) => {
 
   let hook = "";
   let body = "";
+  let review = "";
+  let conclusion = "";
+  let final = "";
 
   hook = await openAiClient([
-    { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
+    { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
   ]);
 
-  console.log('hook:', hook);
+  console.log('\nhook:', hook);
 
   body = await openAiClient([
-    { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
-    { role: "user", content: generateCoverLetterPrompt(resumeSummary, jobSummary, hook) }
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
   ]);
 
-  const parts = body.split(/(?=Thank you)/);
+  console.log('\nbody:', body);
+  
+
+  review = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+  ]);
+
+  console.log('\nrevised:', review);
+
+  conclusion = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateConclusionPrompt(hook, body) }
+  ]);
+
+  console.log('\nconclusion:', conclusion);
+
+  final = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+  ]);
+
+  console.log('\nfinal:', final);
 
   const outputFilePath = "dist/cover_letter.pdf";
 
-  return writeCoverLetterPDF({ hook: hook, body: parts[0] || "", closing: parts[1] || "" });
+  return writeCoverLetterPDF({final});
 };
 
 
@@ -141,9 +176,17 @@ const coverLetterEndpoint = pdfEndpoint.build({
   method: 'post',
   input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
+  handler: async ({ input: { name, jobUrl }, logger }) => {
     const pdfBuffer = await generateLetter({ url: jobUrl });
-    return { file: pdfBuffer };
+
+    // Save the PDF to the public folder
+    const fileName = `cover_letter_${Date.now()}.pdf`;
+    const filePath = path.join(__dirname, '..', '..', 'public', fileName);
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    // Read the file back into a buffer and return it
+    const savedPdfBuffer = fs.readFileSync(filePath);
+    return { file: savedPdfBuffer };
   },
 });
 

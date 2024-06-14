@@ -24,8 +24,6 @@ export const StringifyPdf = (filePath: string) : string =>{
   return result;
 }
 
-
-
 export const StringifyTxt = (filePath: string) : string => {
   try {
     const data = fs.readFileSync(filePath, 'utf8');

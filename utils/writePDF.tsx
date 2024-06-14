@@ -75,9 +75,9 @@ const styles = StyleSheet.create({
   }
 });
 
-export const writeCoverLetterPDF = async ({hook, body, closing}: {hook: string, body: string, closing: string}): Promise<Buffer> => {
+export const writeCoverLetterPDF = async ({final}: {final: string}): Promise<Buffer> => {
   try {
-      const pdfDocument = generatePDFDocument({ hook, body, closing });
+      const pdfDocument = generatePDFDocument({ final });
       const pdfBuffer = await renderToBuffer(pdfDocument);
       return pdfBuffer;
   } catch (error) {
@@ -86,7 +86,7 @@ export const writeCoverLetterPDF = async ({hook, body, closing}: {hook: string, 
   }
 };
 
- const generatePDFDocument = ({hook, body, closing}: {hook: string, body: string, closing: string})  => (
+ const generatePDFDocument = ({final}: {final: string})  => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
@@ -106,13 +106,8 @@ export const writeCoverLetterPDF = async ({hook, body, closing}: {hook: string, 
         <Text>To Whom It May Concern:</Text>
       </View>
       <View style={styles.body}>
-        <View style={styles.paragraph}>
-          <Text>{hook}</Text>
-        </View>
-        <View style={styles.paragraph}>
-          <Text>
-            {body}
-          </Text>
+      <View style={styles.paragraph}>
+        <Text>{final}</Text> 
         </View>
       </View>
       <View style={styles.table}>
@@ -150,7 +145,7 @@ export const writeCoverLetterPDF = async ({hook, body, closing}: {hook: string, 
         </View>
       </View>
       <View style={styles.signature}>
-        <Text>{closing + "\n"}</Text>
+        <Text>{"\n"}</Text>
         <Text>Sincerely,</Text>
         <Text>Ivan Pedroza</Text>
       </View>

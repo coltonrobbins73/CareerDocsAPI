@@ -14,6 +14,8 @@ export const generateJobListingPrompt = (jobListing: string) => dedent(`
     Skill 1:
     Skill 2:
     Skill 3:
+    Skill 4:
+    Skill 5:
 
     Do not include explanations, reasoning, or additional commentary.
 `);

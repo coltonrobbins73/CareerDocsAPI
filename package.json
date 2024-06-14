@@ -42,6 +42,10 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/cheerio": "^0.22.35",
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.4.5"
   }
 }
