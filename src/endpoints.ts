@@ -176,17 +176,9 @@ const coverLetterEndpoint = pdfEndpoint.build({
   method: 'post',
   input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl }, logger }) => {
+  handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
     const pdfBuffer = await generateLetter({ url: jobUrl });
-
-    // Save the PDF to the public folder
-    const fileName = `cover_letter_${Date.now()}.pdf`;
-    const filePath = path.join(__dirname, '..', '..', 'public', fileName);
-    fs.writeFileSync(filePath, pdfBuffer);
-
-    // Read the file back into a buffer and return it
-    const savedPdfBuffer = fs.readFileSync(filePath);
-    return { file: savedPdfBuffer };
+    return { file: pdfBuffer };
   },
 });
 
