@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     color: fontColorPrimary
   },
   name: {
-    fontSize: 30,
+    fontSize: 25,
     fontWeight: 700,
     color: fontColorPrimary,
     paddingLeft: 0,
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   nameSection: {
-    flex: 1,
+    flex: 2,
     justifyContent: 'flex-start',
     paddingLeft: 0,
   },
@@ -123,6 +123,44 @@ function getCurrentFormattedDate(): string {
 }
 
 
+export interface ContactInfo {
+  applicantName: string;
+  applicantTitle: string;
+  applicantEmail: string;
+  applicantResidence: string;
+  applicantPortfolioWebsite: string;
+  applicantGithub: string;
+  applicantPhone: string;
+}
+
+export function extractResumeSummary(resumeSummary: string): ContactInfo {
+  const fields = {
+    applicantName: /"Applicant name":\s*"([^"]*)"/i,
+    applicantTitle: /"Applicant title":\s*"([^"]*)"/i,
+    applicantEmail: /"Applicant email":\s*"([^"]*)"/i,
+    applicantResidence: /"Applicant residence":\s*"([^"]*)"/i,
+    applicantPortfolioWebsite: /"Applicant portfolio website":\s*"([^"]*)"/i,
+    applicantGithub: /"Applicant github":\s*"([^"]*)"/i,
+    applicantPhone: /"Applicant phone":\s*"([^"]*)"/i,
+  };
+
+  const extractField = (pattern: RegExp): string => {
+    const match = resumeSummary.match(pattern);
+    return match && match[1] ? match[1] : "";
+  };
+
+  return {
+    applicantName: extractField(fields.applicantName),
+    applicantTitle: extractField(fields.applicantTitle),
+    applicantEmail: extractField(fields.applicantEmail),
+    applicantResidence: extractField(fields.applicantResidence),
+    applicantPortfolioWebsite: extractField(fields.applicantPortfolioWebsite),
+    applicantGithub: extractField(fields.applicantGithub),
+    applicantPhone: extractField(fields.applicantPhone),
+  };
+}
+
+
 export const generatePDFDocument = ({hook, body, closing}: {hook: string, body: string, closing: string}) => (
   <Document>
     <Page size="A4" style={styles.page}>
@@ -169,17 +207,26 @@ export const generatePDFDocument = ({hook, body, closing}: {hook: string, body: 
   </Document>
 );
 
-export const writeCoverLetterPDF = ({final}: {final: string}) => (
+
+
+export const writeCoverLetterPDF = ({
+  final,
+  contactInfo,
+}: {
+  final: string;
+  contactInfo: ContactInfo;
+}) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.container}>
         <View style={styles.nameSection}>
-          <Text style={styles.name}>Ivan Pedroza</Text>
+          <Text style={styles.name}>{contactInfo.applicantName}</Text>
         </View>
         <View style={styles.contactInfoSection}>
-          <Text>Seattle, WA 98107</Text>
-          <Text>204 5394-2345</Text>
-          <Text>ivan.k.pedroza@gmail.com</Text>
+          <Text>{contactInfo.applicantResidence}</Text>
+          <Text>{contactInfo.applicantPhone}</Text>
+          <Text>{contactInfo.applicantEmail}</Text>
+          <Text>{contactInfo.applicantPortfolioWebsite}</Text>
         </View>
       </View>
       <Gap />
@@ -188,11 +235,9 @@ export const writeCoverLetterPDF = ({final}: {final: string}) => (
       <Text>88 Colin P. Kelly Jr. Street</Text>
       <Text>San Francisco, CA 94107</Text>
       <Gap />
-      <Text>To Whom It May Concern</Text>
-      <Gap />
       <Paragraph>{final}</Paragraph>
       <Text>Sincerely,</Text>
-      <Text>Ivan Pedroza</Text>
+      <Text>{contactInfo.applicantName}</Text>
     </Page>
   </Document>
 );

@@ -9,7 +9,7 @@ import { google } from 'googleapis';
 import dotenv from 'dotenv';
 import {GPT} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
+import { generatePDFDocument, writeCoverLetterPDF, extractResumeSummary, ContactInfo} from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
@@ -49,6 +49,7 @@ const generateLetter = async ({url}: {url: string}) => {
       ])
   ]);
 
+  console.log('\n\Resume details:', resumeSummary);
 
   const hook = await GPT([
       { role: "system", content: coverLetterWriterPersona },
@@ -75,11 +76,13 @@ const generateLetter = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
-  console.log('\n\nModel:', process.env.OPENAI_MODEL);
+  console.log('\n\nModel:', process.env.GEMINI_MODEL);
+  console.log('\nfinal:', final);
 
-  console.log('\n\nfinal:', final);
+  const extractedContactInfo = extractResumeSummary(resumeSummary);
+  console.log(extractedContactInfo);
 
-  return writeCoverLetterPDF({final});
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
 };
 
 
@@ -99,6 +102,7 @@ const geminiGenerate = async ({url}: {url: string}) => {
       ])
   ]);
 
+  console.log('\n\Resume details:', resumeSummary);
 
   const hook = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
@@ -126,14 +130,13 @@ const geminiGenerate = async ({url}: {url: string}) => {
   ]);
 
   console.log('\n\nModel:', process.env.GEMINI_MODEL);
-
   console.log('\nfinal:', final);
 
-  return writeCoverLetterPDF({final});
+  const extractedContactInfo = extractResumeSummary(resumeSummary);
+  console.log(extractedContactInfo);
+
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
 };
-
-
-
 
 
 const pdfEndpoint = new EndpointsFactory(
