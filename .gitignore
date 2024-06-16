@@ -1,5 +1,5 @@
-# Ignore everything in the public directory
-public/*
+# Ignore everything in the public/secure/ directory
+public/secure/*
 
 # Ignore everything in the dist directory
 dist/*

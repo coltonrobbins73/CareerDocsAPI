@@ -31,7 +31,7 @@ const coverLetterWriterPersona : string = `You are an expert cover letter writer
 comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
-const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
+const resume : string = StringifyPdf("public/secure/Ivan Pedroza Resume.pdf");
 
 const generateLetter = async ({url}: {url: string}) => {
   const jobListing = await fetchListing(url);
@@ -191,7 +191,7 @@ const resumeEndpoint = pdfEndpoint.build({
   input: z.object({ name: z.string().optional() }),
   output: z.object({ filename: z.string() }),
   handler: async ({ input: { name }, logger }) => {
-    const filePath = `public/Ivan Pedroza Resume.pdf`;
+    const filePath = `public/secure/Ivan Pedroza Resume.pdf`;
     return { filename: filePath };
   },
 });
