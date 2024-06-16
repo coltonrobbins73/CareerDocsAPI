@@ -75,7 +75,9 @@ const generateLetter = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
-  console.log('\nfinal:', final);
+  console.log('\n\nModel:', process.env.OPENAI_MODEL);
+
+  console.log('\n\nfinal:', final);
 
   return writeCoverLetterPDF({final});
 };
@@ -123,6 +125,8 @@ const geminiGenerate = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
+  console.log('\n\nModel:', process.env.GEMINI_MODEL);
+
   console.log('\nfinal:', final);
 
   return writeCoverLetterPDF({final});
@@ -169,7 +173,7 @@ const job = defaultEndpointsFactory.build({
   },
 });
 
-// Endpoint to fetch resume
+// Endpoint to fetch job listing
 const test = pdfEndpoint.build({
   shortDescription: "fetches job listing",
   description: 'retrieves text from job listing',
@@ -200,15 +204,30 @@ const coverLetterEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches cover letter files",
   description: 'Retrieves most up-to-date general cover letter',
   method: 'post',
-  input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
+  input: z.object({
+    name: z.string().optional(),
+    jobUrl: z.string(),
+    model: z.enum(['gpt', 'gemini']) // Add model choice
+  }),  
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl }}): Promise<{ file: Buffer }> => {
-    const pdfBuffer = await geminiGenerate({ url: jobUrl });
-    // const pdfBuffer = await generateLetter({ url: jobUrl });
-    const file = renderToBuffer(pdfBuffer);
-    return { file: await file };
+  handler: async ({ input: { name, jobUrl, model } }): Promise<{ file: Buffer }> => {
+    let pdfDocument: React.ReactElement<ReactPDF.DocumentProps> | undefined;
+    if (model === 'gemini') {
+      pdfDocument = await geminiGenerate({ url: jobUrl });
+    } else if (model === 'gpt') {
+      pdfDocument = await generateLetter({ url: jobUrl });
+    }
+
+    if (!pdfDocument) {
+      throw new Error('Failed to generate PDF document');
+    }
+
+    const file = await renderToBuffer(pdfDocument);
+    return { file };
   },
 });
+
+
 
 export const appRouter: Routing = {
   job: job,
