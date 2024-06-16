@@ -18,5 +18,6 @@ export const generateBodyPrompt = (resumeSummary: string, jobSummary: string, ho
     expected_output:
     2 paragraph cover letter body with a strong focus on the company's future needs and how the applicant can fulfill those needs.
     DO NOT output the provided hook.
-    Do NOT include explanations, reasoning, or additional commentary.
+    Do not include explanations, reasoning, or additional commentary.
+    Only output the raw text response.
 `);

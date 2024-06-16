@@ -16,5 +16,5 @@ export const generateConclusionPrompt = (hook: string, body: string) => dedent(`
     1 paragraph cover letter conclusion.
     DO NOT output the provided hook or body.
     Do not include explanations, reasoning, or additional commentary.
-
+    Only output the raw text response.
 `);

@@ -17,4 +17,5 @@ export const generateReviewPrompt = (resumeSummary: string, jobSummary: string, 
     expected_output:
     2 paragraph cover letter body that that aligns the applicants skills with the job requirements.
     Do not include explanations, reasoning, or additional commentary.
+    Only output the raw text response.
 `);
