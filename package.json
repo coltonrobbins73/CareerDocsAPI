@@ -46,8 +46,10 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "@llama-node/core": "^0.1.6",
-    "dotenv": "^16.4.5",
-    "llama-node": "^0.1.6"
+    "@types/axios": "^0.14.0",
+    "@types/cheerio": "^0.22.35",
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.5"
   }
 }

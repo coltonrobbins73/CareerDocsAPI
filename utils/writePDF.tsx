@@ -168,3 +168,31 @@ export const generatePDFDocument = ({hook, body, closing}: {hook: string, body: 
     </Page>
   </Document>
 );
+
+export const writeCoverLetterPDF = ({final}: {final: string}) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      <View style={styles.container}>
+        <View style={styles.nameSection}>
+          <Text style={styles.name}>Ivan Pedroza</Text>
+        </View>
+        <View style={styles.contactInfoSection}>
+          <Text>Seattle, WA 98107</Text>
+          <Text>204 5394-2345</Text>
+          <Text>ivan.k.pedroza@gmail.com</Text>
+        </View>
+      </View>
+      <Gap />
+      <Text>{getCurrentFormattedDate()}</Text>
+      <Gap />
+      <Text>88 Colin P. Kelly Jr. Street</Text>
+      <Text>San Francisco, CA 94107</Text>
+      <Gap />
+      <Text>To Whom It May Concern</Text>
+      <Gap />
+      <Paragraph>{final}</Paragraph>
+      <Text>Sincerely,</Text>
+      <Text>Ivan Pedroza</Text>
+    </Page>
+  </Document>
+);

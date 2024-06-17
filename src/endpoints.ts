@@ -1,80 +1,93 @@
 import { z } from 'zod';
 import fs from 'fs';
 import url from 'url';
+import path from 'path'; // Import the path module
 import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFactory } from 'express-zod-api';
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
 import { google } from 'googleapis';
 
 import dotenv from 'dotenv';
 import {openAiClient} from '../models/OpenAIClient';
-import {StringifyTxt, StringifyPdf} from './utils/DocumentLoader';
-import { generatePDFDocument } from './utils/writePDF';
-import { generateJobListingPrompt } from './prompts/jobListingPrompt';
-import { generateResumePrompt } from './prompts/resumePrompt';
-import { generateHookPrompt } from './prompts/hookPrompt';
-import { generateCoverLetterPrompt } from './prompts/coverLetterPrompt';
-import { generateRequirementsPrompt } from './prompts/requirementsPrompt';
-import ReactPDF, { PDFRenderer, renderToBuffer } from '@react-pdf/renderer';
-import {fetchListing} from './utils/jobs';
+import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
+// import { fuzzySplit } from '../utils/fuzzySplit';
+import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
+import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
+import { generateResumePrompt } from '../prompts/resumePrompt';
+import { generateHookPrompt } from '../prompts/hookPrompt';
+import { generateBodyPrompt } from '../prompts/bodyPrompt';
+import { generateReviewPrompt } from '../prompts/reviewPrompt';
+import { generateConclusionPrompt } from '../prompts/conclusionPrompt';
+import { generateFinalPrompt } from '../prompts/truthPrompt';
+import ReactPDF, {renderToBuffer} from '@react-pdf/renderer';
+import {fetchListing} from '../utils/jobs';
 
 dotenv.config();
 
+// --- Persona Definitions ---
+const talentAcquisitionExpertPersona : string = `You are an expert in talent acquisition \
+and workforce optimization with 20 years of experience summarizing job descriptions.`;
+
+const coverLetterWriterPersona : string = `You are an expert cover letter writer with a \
+comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
 const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
 
-const generateLetter = async ({ url }: { url: string }) => {
-  // Fetch the job listing
-  const jobListing = await fetchListing(url);
-  const jobListingPrompt = generateJobListingPrompt(jobListing);
+const generateLetter = async ({url}: {url: string}) => {
+    // Generate job summary
+    const jobListingPrompt = generateJobListingPrompt( await fetchListing(url));
+    const jobSummary = await openAiClient([
+        { role: "system", content: talentAcquisitionExpertPersona },
+        { role: "user", content: jobListingPrompt }
+    ]);
+    console.log(jobSummary);
+    // Generate resume summary
+    const resumePrompt = generateResumePrompt(resume);
+    const resumeSummary = await openAiClient([
+        { role: "system", content: talentAcquisitionExpertPersona },
+        { role: "user", content: resumePrompt }
+    ]);
 
-  // Define the prompts
-  const jobSummaryPrompt = [
-    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
-    { role: "user", content: jobListingPrompt }
-  ];
 
-  const resumePrompt = generateResumePrompt(resume);
-  const resumeSummaryPrompt = [
-    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
-    { role: "user", content: resumePrompt }
-  ];
-
-  const requirementsPrompt = generateRequirementsPrompt(resume, jobListing);
-  const requirementsSummaryPrompt = [
-    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
-    { role: "user", content: requirementsPrompt }
-  ];
-
-  const hookPrompt = (resumeSummary: string, jobSummary: string) => [
-    { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
+  let hook = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
-  ];
-
-  const coverLetterPrompt = (resumeSummary: string, jobSummary: string, hook: string) => [
-    { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
-    { role: "user", content: generateCoverLetterPrompt(resumeSummary, jobSummary, hook) }
-  ];
-
-  // Execute OpenAI calls in parallel
-  const [jobSummary, resumeSummary, requirementsSummary] = await Promise.all([
-    openAiClient(jobSummaryPrompt),
-    openAiClient(resumeSummaryPrompt),
-    openAiClient(requirementsSummaryPrompt)
   ]);
 
-  // Generate hook and body sequentially as they depend on previous results
-  const hook = await openAiClient(hookPrompt(resumeSummary, jobSummary));
-  const body = await openAiClient(coverLetterPrompt(resumeSummary, jobSummary, hook));
+  console.log('\nhook:', hook);
 
-  const paragraphParts = body.split(/(?=Thank you)/);
-  const requirementsPromptParts = requirementsSummary.split(/- [^\r\n]+/);
+  let body = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
+  ]);
 
-  return generatePDFDocument({ hook, body: paragraphParts[0] || "", closing: paragraphParts[1] || "" });
+  console.log('\nbody:', body);
+  
+
+  let review = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+  ]);
+
+  console.log('\nrevised:', review);
+
+  let conclusion = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateConclusionPrompt(hook, body) }
+  ]);
+
+  console.log('\nconclusion:', conclusion);
+
+  let final = await openAiClient([
+    { role: "system", content: coverLetterWriterPersona },
+    { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+  ]);
+
+  console.log('\nfinal:', final);
+
+
+  return writeCoverLetterPDF({final});
 };
-
-
-
 
 
 const pdfEndpoint = new EndpointsFactory(
