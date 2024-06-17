@@ -9,7 +9,6 @@ import { google } from 'googleapis';
 import dotenv from 'dotenv';
 import {openAiClient} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-// import { fuzzySplit } from '../utils/fuzzySplit';
 import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
@@ -34,57 +33,47 @@ comprehensive understanding of Applicant Tracking Systems (ATS) and keyword opti
 const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
 
 const generateLetter = async ({url}: {url: string}) => {
-    // Generate job summary
-    const jobListingPrompt = generateJobListingPrompt( await fetchListing(url));
-    const jobSummary = await openAiClient([
-        { role: "system", content: talentAcquisitionExpertPersona },
-        { role: "user", content: jobListingPrompt }
-    ]);
-    console.log(jobSummary);
-    // Generate resume summary
-    const resumePrompt = generateResumePrompt(resume);
-    const resumeSummary = await openAiClient([
-        { role: "system", content: talentAcquisitionExpertPersona },
-        { role: "user", content: resumePrompt }
-    ]);
+  const jobListing = await fetchListing(url);
+  const jobListingPrompt = generateJobListingPrompt(jobListing);
 
-
-  let hook = await openAiClient([
-    { role: "system", content: coverLetterWriterPersona },
-    { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
+  // Initiate jobSummary and resumeSummary in parallel
+  const [jobSummary, resumeSummary] = await Promise.all([
+      openAiClient([
+          { role: "system", content: talentAcquisitionExpertPersona },
+          { role: "user", content: jobListingPrompt }
+      ]),
+      openAiClient([
+          { role: "system", content: talentAcquisitionExpertPersona },
+          { role: "user", content: generateResumePrompt(resume) }
+      ])
   ]);
 
-  console.log('\nhook:', hook);
-
-  let body = await openAiClient([
-    { role: "system", content: coverLetterWriterPersona },
-    { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
+  const hook = await openAiClient([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
   ]);
 
-  console.log('\nbody:', body);
-  
-
-  let review = await openAiClient([
-    { role: "system", content: coverLetterWriterPersona },
-    { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+  const body = await openAiClient([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
   ]);
 
-  console.log('\nrevised:', review);
-
-  let conclusion = await openAiClient([
-    { role: "system", content: coverLetterWriterPersona },
-    { role: "user", content: generateConclusionPrompt(hook, body) }
+  const review = await openAiClient([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
   ]);
 
-  console.log('\nconclusion:', conclusion);
+  const conclusion = await openAiClient([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateConclusionPrompt(hook, body) }
+  ]);
 
-  let final = await openAiClient([
-    { role: "system", content: coverLetterWriterPersona },
-    { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+  const final = await openAiClient([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
   console.log('\nfinal:', final);
-
 
   return writeCoverLetterPDF({final});
 };
@@ -115,15 +104,16 @@ const pdfEndpoint = new EndpointsFactory(
   })
 );
 
-// Endpoint to fetch resume
-const job = pdfEndpoint.build({
+const job = defaultEndpointsFactory.build({
   shortDescription: "fetches job listing",
   description: 'retrieves text from job listing',
   method: 'post',
   input: z.object({ url: z.string() }),
   output: z.object({ text: z.string() }),
   handler: async ({ input: { url } }) => {
-    return { text: ((await fetchListing(url))) };
+    const jobListing = await fetchListing(url);
+    console.log('jobListing:', jobListing);
+    return { text: (jobListing) };
   },
 });
 
@@ -160,7 +150,7 @@ const coverLetterEndpoint = pdfEndpoint.build({
   method: 'post',
   input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
+  handler: async ({ input: { name, jobUrl }}): Promise<{ file: Buffer }> => {
     const pdfBuffer = await generateLetter({ url: jobUrl });
     const file = renderToBuffer(pdfBuffer);
     return { file: await file };

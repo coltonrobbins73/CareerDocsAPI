@@ -23,15 +23,49 @@ paths:
         "200":
           description: POST /job Positive response
           content:
-            application/pdf:
+            application/json:
               schema:
-                format: any
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: success
+                  data:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                    required:
+                      - text
+                required:
+                  - status
+                  - data
         "400":
           description: POST /job Negative response
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: error
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                    required:
+                      - message
+                required:
+                  - status
+                  - error
+              examples:
+                example1:
+                  value:
+                    status: error
+                    error:
+                      message: Sample error message
   /test:
     post:
       operationId: PostTest

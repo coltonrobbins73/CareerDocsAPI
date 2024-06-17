@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-export const fetchListing = async ( url: string)=> {
+export const fetchListing = async ( url: string): Promise<string>=> {
     try {
         const { data } = await axios.get(url);
         const $ = cheerio.load(data);
