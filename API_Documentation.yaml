@@ -32,6 +32,35 @@ paths:
             text/plain:
               schema:
                 type: string
+  /test:
+    post:
+      operationId: PostTest
+      summary: fetches job listing
+      description: retrieves text from job listing
+      requestBody:
+        description: POST /test Request body
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jobUrl:
+                  type: string
+              required:
+                - jobUrl
+      responses:
+        "200":
+          description: POST /test Positive response
+          content:
+            application/pdf:
+              schema:
+                format: any
+        "400":
+          description: POST /test Negative response
+          content:
+            text/plain:
+              schema:
+                type: string
   /resume:
     post:
       operationId: PostResume

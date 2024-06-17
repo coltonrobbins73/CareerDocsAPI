@@ -1,0 +1,14 @@
+{
+    "Paragraph1" : "I am excited to apply for the role of Software Engineer at GitHub. With a deep passion for open source and web standards, along with over three years of computer science experience, I am excited about the opportunity to contribute to the GitHub mission and help shape the future of software development.",
+    "Paragraph2":  "I have a proven track record of writing, reviewing, and maintaining code and technical documentation. I have collaborated with various teams to implement a Lab Inventory Management System, restructuring lab setups, and developing user-friendly applications for batch log documentation. My technical",
+    "Paragraph3": "During my time at NanoString, my self-taught proficiency in computer science and self-driven initiatives paved the way for my transition into a Bioinformatics role. To further enhance my computer science skills, I embarked on a Master’s program at Northeastern University. Here, I honed my skills in software design and development which proved instrumental in streamlining our bioinformatic pipeline.",
+    "Paragraph4": "In this bioinformatics role, I've closely collaborated with biostatisticians and software developers design RNA probes for three different platform. Across these diverse domains, I actively sought and embraced leadership opportunities. This included mentoring and training colleagues, facilitating cross-lab collaboration, and spearheading the scaling of process improvements.",
+    "Paragraph5": "I'm genuinely excited about the opportunity to contribute my skills, expertise, and commitment at GitHub. Thank you for considering my application, and I am excited to potentially join your team.",
+    "skills_intro": "Below is an analysis of a few requirements that match my background:",
+    "want1": "3+ years of software engineering experience. 2+ years of experience with Git & GitHub",
+    "want2": "Strong 3+ years of experience developing & debuggin large scale projects, applications or developer tools. 3 years of experience interfacing with RESTful APIs & OAuth Workflows.",
+    "want3": "Strong communication/interpersonal skills both written & verbal. You will write, review & maintain code & technical documentation.",
+    "have1": "A Master’s in Computer Science, 2 years of experience using Git and GitHub.",
+    "have2": "4 years of experience developing large scale solutions for manufacturing and bioinformatics pipelines. Experience interfacing with government database APIs.",     
+    "have3": "Proficient in crafting scientific papers for publication and effectively conveying experimental findings on groundbreaking molecular research to collaborating labs and stakeholders."
+}

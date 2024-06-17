@@ -9,6 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import { oauth2Client, authorizeUrl, generateJWT } from "./googleAuth";
 import { google } from 'googleapis';
 import url from 'url';
+import { Client } from 'pg';
 
 
 const app = express();
@@ -19,6 +20,16 @@ const config: AppConfig<string> = {
     cors: true,
     logger: {level: 'debug', color: true},
 };
+
+// PostgreSQL Client Setup
+// const client = new Client({
+//     user: 'yourusername',
+//     host: 'localhost',
+//     database: 'jobtracker',
+//     password: 'yourpassword',
+//     port: 5432,
+//   });
+//   client.connect();
 
 // Generate documentation in YAML format and save it
 const yamlString = new Documentation({

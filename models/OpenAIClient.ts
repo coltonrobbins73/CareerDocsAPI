@@ -11,7 +11,7 @@ const config = {
 
 const client = new OpenAI(config);
 
-export const openAiClient = async (messages: Message[]): Promise<string> => {
+export const openAiClient = async (messages: Message[]): Promise<any> => {
     if (!process.env.OPENAI_MODEL) {
         throw new Error("OPENAI_MODEL environment variable is not defined");
     }
@@ -21,16 +21,19 @@ export const openAiClient = async (messages: Message[]): Promise<string> => {
         content: message.content,
     }));
 
-    const stream = await client.chat.completions.create({
-        model: process.env.OPENAI_MODEL,
-        messages: chatMessages,
-        stream: true,
-    });
+    try {
+        const response = await client.chat.completions.create({
+            model: process.env.OPENAI_MODEL,
+            messages: chatMessages,
+        });
 
-    let responseText = '';
-    for await (const chunk of stream) {
-        responseText += chunk.choices[0]?.delta?.content || "";
+        if (response.choices && response.choices[0] && response.choices[0].message) {
+            return response.choices[0].message.content;
+        } else {
+            throw new Error("Invalid response from OpenAI API");
+        }
+    } catch (error) {
+        console.error('Error making OpenAI API request:', error);
+        throw error;
     }
-
-    return responseText;
 };

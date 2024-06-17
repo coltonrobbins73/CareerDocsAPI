@@ -2,21 +2,20 @@ import { z } from 'zod';
 import fs from 'fs';
 import url from 'url';
 import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFactory } from 'express-zod-api';
-import e, { Request, Response, NextFunction } from 'express';
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
 import { google } from 'googleapis';
 
 import dotenv from 'dotenv';
 import {openAiClient} from '../models/OpenAIClient';
-import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-// import { fuzzySplit } from '../utils/fuzzySplit';
-import { writeCoverLetterPDF } from '../utils/writePDF';
-import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
-import { generateResumePrompt } from '../prompts/resumePrompt';
-import { generateHookPrompt } from '../prompts/hookPrompt';
-import { generateCoverLetterPrompt } from '../prompts/coverLetterPrompt';
-import ReactPDF from '@react-pdf/renderer';
-import {fetchListing} from '../utils/jobs';
+import {StringifyTxt, StringifyPdf} from './utils/DocumentLoader';
+import { generatePDFDocument } from './utils/writePDF';
+import { generateJobListingPrompt } from './prompts/jobListingPrompt';
+import { generateResumePrompt } from './prompts/resumePrompt';
+import { generateHookPrompt } from './prompts/hookPrompt';
+import { generateCoverLetterPrompt } from './prompts/coverLetterPrompt';
+import { generateRequirementsPrompt } from './prompts/requirementsPrompt';
+import ReactPDF, { PDFRenderer, renderToBuffer } from '@react-pdf/renderer';
+import {fetchListing} from './utils/jobs';
 
 dotenv.config();
 
@@ -24,65 +23,58 @@ dotenv.config();
 
 const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
 
-const generateLetter = async ({url}: {url: string}) => {
-    // Generate job summary
-    const jobListingPrompt = generateJobListingPrompt( await fetchListing(url));
-    const jobSummary = await openAiClient([
-        { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
-        { role: "user", content: jobListingPrompt }
-    ]);
-    console.log(jobSummary);
-    // Generate resume summary
-    const resumePrompt = generateResumePrompt(resume);
-    const resumeSummary = await openAiClient([
-        { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
-        { role: "user", content: resumePrompt }
-    ]);
+const generateLetter = async ({ url }: { url: string }) => {
+  // Fetch the job listing
+  const jobListing = await fetchListing(url);
+  const jobListingPrompt = generateJobListingPrompt(jobListing);
 
-  //   // Split resume summary to extract contact info
-  //   const pattern = "Previous work experience";
-  //   const splitParts = fuzzySplit
+  // Define the prompts
+  const jobSummaryPrompt = [
+    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
+    { role: "user", content: jobListingPrompt }
+  ];
 
-  //   let contactInfo = "";
-  // if (splitParts.length === 2) {
-  //   contactInfo = splitParts[0].trim();
-  //   resumeSummary = splitParts[1].trim();
-  //   console.log('Contact info split successful\n\n');
-  // } else {
-  //   console.log("Pattern not found or similarity too low.");
-  // }
+  const resumePrompt = generateResumePrompt(resume);
+  const resumeSummaryPrompt = [
+    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
+    { role: "user", content: resumePrompt }
+  ];
 
+  const requirementsPrompt = generateRequirementsPrompt(resume, jobListing);
+  const requirementsSummaryPrompt = [
+    { role: "system", content: "You are an expert in talent acquisition and workforce optimization with 20 years of experience summarizing job descriptions." },
+    { role: "user", content: requirementsPrompt }
+  ];
 
-  let hook = "";
-  let body = "";
-
-  hook = await openAiClient([
+  const hookPrompt = (resumeSummary: string, jobSummary: string) => [
     { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
     { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
-  ]);
+  ];
 
-  console.log('hook:', hook);
-
-  body = await openAiClient([
+  const coverLetterPrompt = (resumeSummary: string, jobSummary: string, hook: string) => [
     { role: "system", content: "You are an expert cover letter writer with a comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization." },
     { role: "user", content: generateCoverLetterPrompt(resumeSummary, jobSummary, hook) }
+  ];
+
+  // Execute OpenAI calls in parallel
+  const [jobSummary, resumeSummary, requirementsSummary] = await Promise.all([
+    openAiClient(jobSummaryPrompt),
+    openAiClient(resumeSummaryPrompt),
+    openAiClient(requirementsSummaryPrompt)
   ]);
 
-  const parts = body.split(/(?=Thank you)/);
+  // Generate hook and body sequentially as they depend on previous results
+  const hook = await openAiClient(hookPrompt(resumeSummary, jobSummary));
+  const body = await openAiClient(coverLetterPrompt(resumeSummary, jobSummary, hook));
 
-  const outputFilePath = "dist/cover_letter.pdf";
+  const paragraphParts = body.split(/(?=Thank you)/);
+  const requirementsPromptParts = requirementsSummary.split(/- [^\r\n]+/);
 
-  return writeCoverLetterPDF({ hook: hook, body: parts[0] || "", closing: parts[1] || "" });
+  return generatePDFDocument({ hook, body: paragraphParts[0] || "", closing: paragraphParts[1] || "" });
 };
 
 
 
-// const secure = (req: Request, res: Response, next: NextFunction) => {
-//     res.redirect(authorizeUrl);
-//     req.get('/oauthcallback')
-//     res.get
-//     return next();
-// }
 
 
 const pdfEndpoint = new EndpointsFactory(
@@ -98,7 +90,7 @@ const pdfEndpoint = new EndpointsFactory(
         return;
       }
       if (output && output.file) {
-        const pdfBuffer = output.file as Buffer; // Ensure that output.file is treated as a Buffer
+        const pdfBuffer = output.file as Buffer;
         response
           .status(200)
           .type('application/pdf')
@@ -123,6 +115,20 @@ const job = pdfEndpoint.build({
 });
 
 // Endpoint to fetch resume
+const test = pdfEndpoint.build({
+  shortDescription: "fetches job listing",
+  description: 'retrieves text from job listing',
+  method: 'post',
+  input: z.object({ jobUrl: z.string()}),
+  output: z.object({ text: z.string() }),
+  handler: async ({ input: { jobUrl } }) => {
+    return { text: "" };
+  },
+});
+
+
+
+// Endpoint to fetch resume
 const resumeEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches resume files",
   description: 'Retrieves most up-to-date resume',
@@ -143,12 +149,14 @@ const coverLetterEndpoint = pdfEndpoint.build({
   output: z.object({ file: z.instanceof(Buffer) }),
   handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
     const pdfBuffer = await generateLetter({ url: jobUrl });
-    return { file: pdfBuffer };
+    const file = renderToBuffer(pdfBuffer);
+    return { file: await file };
   },
 });
 
 export const appRouter: Routing = {
   job: job,
+  test: test,
   resume: resumeEndpoint,
   cover: coverLetterEndpoint,
 };
