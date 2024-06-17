@@ -1,7 +1,8 @@
 import React from 'react';
 import fs from 'fs';
 import path from 'path';
-import { Page, Text, View, Document, StyleSheet, Image, Font, renderToBuffer } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Font, renderToBuffer } from '@react-pdf/renderer';
+import info from "./info.json";
 
 // Register the variable font
 Font.register({
@@ -28,128 +29,170 @@ const styles = StyleSheet.create({
     fontFamily: 'EB Garamond',
     color: fontColorPrimary
   },
-  header: {
-    marginBottom: 20
+  name: {
+    fontSize: 30,
+    fontWeight: 700,
+    color: fontColorPrimary,
+    paddingLeft: 0,
   },
-  contactInfo: {
-    marginBottom: 10
+  container: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  date: {
-    marginBottom: 20
+  nameSection: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingLeft: 0,
   },
-  address: {
-    marginBottom: 20
+  contactInfoSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    textAlign: 'right',
+    paddingRight: 20,
   },
-  title: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 10
-  },
-  body: {
-    marginBottom: 20
+  greeting: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: fontColorPrimary,
+    marginBottom: 10,
   },
   paragraph: {
-    marginBottom: 10
+    paddingBottom: 10,
   },
-  signature: {
-    marginTop: 20
-  },
-  table: {
-    display: 'flex',
-    width: 'auto',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  tableRow: {
+  bulletPointsContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 0,
   },
-  tableCol: {
-    width: '50%',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#000',
+  bulletPointsSection: {
+    flex: 1,
+    flexDirection: 'column',
+    padding: 10,
   },
-  tableCell: {
-    margin: 5,
+  bulletPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 5,
+  },
+  bullet: {
+    width: 3,
+    height: 3,
+    marginRight: 5,
+    marginTop: 3,
+    borderRadius: 1.5,
+    backgroundColor: fontColorPrimary,
+  },
+  bulletText: {
+    flex: 1,
     fontSize: 10,
-  }
+    color: fontColorPrimary,
+  },
 });
 
-export const writeCoverLetterPDF = async ({final}: {final: string}): Promise<Buffer> => {
-  try {
-      const pdfDocument = generatePDFDocument({ final });
-      const pdfBuffer = await renderToBuffer(pdfDocument);
-      return pdfBuffer;
-  } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
-  }
-};
+const Gap = () => (
+  <View style={{ marginTop: 7, marginBottom: 7 }}></View>
+)
 
- const generatePDFDocument = ({final}: {final: string})  => (
+const Paragraph = ({ children }: { children: string | string[] }) => (
+  <View style={styles.paragraph}>
+    <Text>{children}</Text>
+  </View>
+)
+
+const BulletPoint = ({ text }: { text: string }) => (
+  <View style={styles.bulletPoint}>
+    <View style={styles.bullet}></View>
+    <Text style={styles.bulletText}>{text}</Text>
+  </View>
+);
+
+function getCurrentFormattedDate(): string {
+  const months = [
+      "January", "February", "March", "April", "May", "June", 
+      "July", "August", "September", "October", "November", "December"
+  ];
+
+  const date = new Date();
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${day} ${month} ${year}`;
+}
+
+
+export const generatePDFDocument = ({hook, body, closing}: {hook: string, body: string, closing: string}) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Ivan Pedroza</Text>
-        <Text>Seattle, WA 98107</Text>
-        <Text>(208) 590-5361</Text>
-        <Text>Ivan.k.pedroza@gmail.com</Text>
-      </View>
-      <View style={styles.date}>
-        <Text>14 November 2023</Text>
-      </View>
-      <View style={styles.address}>
-        <Text>88 Colin P. Kelly Jr. Street</Text>
-        <Text>San Francisco, CA 94107</Text>
-      </View>
-      <View style={styles.paragraph}>
-        <Text>To Whom It May Concern:</Text>
-      </View>
-      <View style={styles.body}>
-      <View style={styles.paragraph}>
-        <Text>{final}</Text> 
+      <View style={styles.container}>
+        <View style={styles.nameSection}>
+          <Text style={styles.name}>Ivan Pedroza</Text>
+        </View>
+        <View style={styles.contactInfoSection}>
+          <Text>Seattle, WA 98107</Text>
+          <Text>204 5394-2345</Text>
+          <Text>ivan.k.pedroza@gmail.com</Text>
         </View>
       </View>
-      <View style={styles.table}>
-        <View style={styles.tableRow}>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>You Want:</Text>
-          </View>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>I Bring:</Text>
-          </View>
+      <Gap />
+      <Text>{getCurrentFormattedDate()}</Text>
+      <Gap />
+      <Text>88 Colin P. Kelly Jr. Street</Text>
+      <Text>San Francisco, CA 94107</Text>
+      <Gap />
+      <Text>To Whom It May Concern</Text>
+      <Gap />
+      <Paragraph>{hook}</Paragraph>
+      <Paragraph>{body}</Paragraph>
+      {/* <Paragraph>{info.Paragraph3}</Paragraph>
+      <Paragraph>{info.Paragraph4}</Paragraph>
+      <Paragraph>{info.skills_intro}</Paragraph> */}
+
+      <View style={styles.bulletPointsContainer}>
+        <View style={styles.bulletPointsSection}>
+          <BulletPoint text={info.want1} />
+          <BulletPoint text={info.want2} />
+          <BulletPoint text={info.want3} />
         </View>
-        <View style={styles.tableRow}>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>3+ years of software engineering experience. 2+ years of experience with Git & GitHub</Text>
-          </View>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>A Master’s in Computer Science, 2 years of experience using Git and GitHub.</Text>
-          </View>
-        </View>
-        <View style={styles.tableRow}>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>Strong 3+ years of experience developing & debugging large scale projects, applications or developer tools. 3+ years of experience interfacing with RESTful APIs & OAuth Workflows.</Text>
-          </View>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>4 years of experience developing large scale solutions for manufacturing and bioinformatics pipelines. Experience interfacing with government database APIs.</Text>
-          </View>
-        </View>
-        <View style={styles.tableRow}>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>Strong communication/interpersonal skills both written & verbal. You will write, review & maintain code & technical documentation.</Text>
-          </View>
-          <View style={styles.tableCol}>
-            <Text style={styles.tableCell}>Proficient in crafting scientific papers for publication and effectively conveying experimental findings on groundbreaking molecular research to collaborating labs and stakeholders.</Text>
-          </View>
+        <View style={styles.bulletPointsSection}>
+          <BulletPoint text={info.have1} />
+          <BulletPoint text={info.have2} />
+          <BulletPoint text={info.have3} />
         </View>
       </View>
-      <View style={styles.signature}>
-        <Text>{"\n"}</Text>
-        <Text>Sincerely,</Text>
-        <Text>Ivan Pedroza</Text>
-      </View>
+      <Paragraph>{closing}</Paragraph>
+      <Text>Sincerely,</Text>
+      <Text>Ivan Pedroza</Text>
     </Page>
   </Document>
 );
 
+export const writeCoverLetterPDF = ({final}: {final: string}) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      <View style={styles.container}>
+        <View style={styles.nameSection}>
+          <Text style={styles.name}>Ivan Pedroza</Text>
+        </View>
+        <View style={styles.contactInfoSection}>
+          <Text>Seattle, WA 98107</Text>
+          <Text>204 5394-2345</Text>
+          <Text>ivan.k.pedroza@gmail.com</Text>
+        </View>
+      </View>
+      <Gap />
+      <Text>{getCurrentFormattedDate()}</Text>
+      <Gap />
+      <Text>88 Colin P. Kelly Jr. Street</Text>
+      <Text>San Francisco, CA 94107</Text>
+      <Gap />
+      <Text>To Whom It May Concern</Text>
+      <Gap />
+      <Paragraph>{final}</Paragraph>
+      <Text>Sincerely,</Text>
+      <Text>Ivan Pedroza</Text>
+    </Page>
+  </Document>
+);

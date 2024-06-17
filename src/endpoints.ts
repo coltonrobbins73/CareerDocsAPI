@@ -3,7 +3,6 @@ import fs from 'fs';
 import url from 'url';
 import path from 'path'; // Import the path module
 import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFactory } from 'express-zod-api';
-import e, { Request, Response, NextFunction } from 'express';
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
 import { google } from 'googleapis';
 
@@ -11,7 +10,7 @@ import dotenv from 'dotenv';
 import {openAiClient} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
 // import { fuzzySplit } from '../utils/fuzzySplit';
-import { writeCoverLetterPDF } from '../utils/writePDF';
+import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
@@ -19,7 +18,7 @@ import { generateBodyPrompt } from '../prompts/bodyPrompt';
 import { generateReviewPrompt } from '../prompts/reviewPrompt';
 import { generateConclusionPrompt } from '../prompts/conclusionPrompt';
 import { generateFinalPrompt } from '../prompts/truthPrompt';
-import ReactPDF from '@react-pdf/renderer';
+import ReactPDF, {renderToBuffer} from '@react-pdf/renderer';
 import {fetchListing} from '../utils/jobs';
 
 dotenv.config();
@@ -49,34 +48,15 @@ const generateLetter = async ({url}: {url: string}) => {
         { role: "user", content: resumePrompt }
     ]);
 
-  //   // Split resume summary to extract contact info
-  //   const pattern = "Previous work experience";
-  //   const splitParts = fuzzySplit
 
-  //   let contactInfo = "";
-  // if (splitParts.length === 2) {
-  //   contactInfo = splitParts[0].trim();
-  //   resumeSummary = splitParts[1].trim();
-  //   console.log('Contact info split successful\n\n');
-  // } else {
-  //   console.log("Pattern not found or similarity too low.");
-  // }
-
-
-  let hook = "";
-  let body = "";
-  let review = "";
-  let conclusion = "";
-  let final = "";
-
-  hook = await openAiClient([
+  let hook = await openAiClient([
     { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
   ]);
 
   console.log('\nhook:', hook);
 
-  body = await openAiClient([
+  let body = await openAiClient([
     { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
   ]);
@@ -84,40 +64,30 @@ const generateLetter = async ({url}: {url: string}) => {
   console.log('\nbody:', body);
   
 
-  review = await openAiClient([
+  let review = await openAiClient([
     { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
   ]);
 
   console.log('\nrevised:', review);
 
-  conclusion = await openAiClient([
+  let conclusion = await openAiClient([
     { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateConclusionPrompt(hook, body) }
   ]);
 
   console.log('\nconclusion:', conclusion);
 
-  final = await openAiClient([
+  let final = await openAiClient([
     { role: "system", content: coverLetterWriterPersona },
     { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
   console.log('\nfinal:', final);
 
-  const outputFilePath = "dist/cover_letter.pdf";
 
   return writeCoverLetterPDF({final});
 };
-
-
-
-// const secure = (req: Request, res: Response, next: NextFunction) => {
-//     res.redirect(authorizeUrl);
-//     req.get('/oauthcallback')
-//     res.get
-//     return next();
-// }
 
 
 const pdfEndpoint = new EndpointsFactory(
@@ -133,7 +103,7 @@ const pdfEndpoint = new EndpointsFactory(
         return;
       }
       if (output && output.file) {
-        const pdfBuffer = output.file as Buffer; // Ensure that output.file is treated as a Buffer
+        const pdfBuffer = output.file as Buffer;
         response
           .status(200)
           .type('application/pdf')
@@ -158,6 +128,20 @@ const job = pdfEndpoint.build({
 });
 
 // Endpoint to fetch resume
+const test = pdfEndpoint.build({
+  shortDescription: "fetches job listing",
+  description: 'retrieves text from job listing',
+  method: 'post',
+  input: z.object({ jobUrl: z.string()}),
+  output: z.object({ text: z.string() }),
+  handler: async ({ input: { jobUrl } }) => {
+    return { text: "" };
+  },
+});
+
+
+
+// Endpoint to fetch resume
 const resumeEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches resume files",
   description: 'Retrieves most up-to-date resume',
@@ -178,12 +162,14 @@ const coverLetterEndpoint = pdfEndpoint.build({
   output: z.object({ file: z.instanceof(Buffer) }),
   handler: async ({ input: { name, jobUrl }, logger }): Promise<{ file: Buffer }> => {
     const pdfBuffer = await generateLetter({ url: jobUrl });
-    return { file: pdfBuffer };
+    const file = renderToBuffer(pdfBuffer);
+    return { file: await file };
   },
 });
 
 export const appRouter: Routing = {
   job: job,
+  test: test,
   resume: resumeEndpoint,
   cover: coverLetterEndpoint,
 };
