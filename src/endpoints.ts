@@ -7,7 +7,7 @@ import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth
 import { google } from 'googleapis';
 
 import dotenv from 'dotenv';
-import {openAiClient} from '../models/OpenAIClient';
+import {GPT} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
 import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
@@ -19,6 +19,7 @@ import { generateConclusionPrompt } from '../prompts/conclusionPrompt';
 import { generateFinalPrompt } from '../prompts/truthPrompt';
 import ReactPDF, {renderToBuffer} from '@react-pdf/renderer';
 import {fetchListing} from '../utils/jobs';
+import {Gemini} from '../models/Gemini';
 
 dotenv.config();
 
@@ -38,37 +39,38 @@ const generateLetter = async ({url}: {url: string}) => {
 
   // Initiate jobSummary and resumeSummary in parallel
   const [jobSummary, resumeSummary] = await Promise.all([
-      openAiClient([
+      GPT([
           { role: "system", content: talentAcquisitionExpertPersona },
           { role: "user", content: jobListingPrompt }
       ]),
-      openAiClient([
+      GPT([
           { role: "system", content: talentAcquisitionExpertPersona },
           { role: "user", content: generateResumePrompt(resume) }
       ])
   ]);
 
-  const hook = await openAiClient([
+
+  const hook = await GPT([
       { role: "system", content: coverLetterWriterPersona },
       { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
   ]);
 
-  const body = await openAiClient([
+  const body = await GPT([
       { role: "system", content: coverLetterWriterPersona },
       { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
   ]);
 
-  const review = await openAiClient([
+  const review = await GPT([
       { role: "system", content: coverLetterWriterPersona },
       { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
   ]);
 
-  const conclusion = await openAiClient([
+  const conclusion = await GPT([
       { role: "system", content: coverLetterWriterPersona },
       { role: "user", content: generateConclusionPrompt(hook, body) }
   ]);
 
-  const final = await openAiClient([
+  const final = await GPT([
       { role: "system", content: coverLetterWriterPersona },
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
@@ -77,6 +79,57 @@ const generateLetter = async ({url}: {url: string}) => {
 
   return writeCoverLetterPDF({final});
 };
+
+
+const geminiGenerate = async ({url}: {url: string}) => {
+  const jobListing = await fetchListing(url);
+  const jobListingPrompt = generateJobListingPrompt(jobListing);
+
+  // Initiate jobSummary and resumeSummary in parallel
+  const [jobSummary, resumeSummary] = await Promise.all([
+      Gemini([
+          { role: "system", content: talentAcquisitionExpertPersona },
+          { role: "user", content: jobListingPrompt }
+      ]),
+      Gemini([
+          { role: "system", content: talentAcquisitionExpertPersona },
+          { role: "user", content: generateResumePrompt(resume) }
+      ])
+  ]);
+
+
+  const hook = await Gemini([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
+  ]);
+
+  const body = await Gemini([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
+  ]);
+
+  const review = await Gemini([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+  ]);
+
+  const conclusion = await Gemini([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateConclusionPrompt(hook, body) }
+  ]);
+
+  const final = await Gemini([
+      { role: "system", content: coverLetterWriterPersona },
+      { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+  ]);
+
+  console.log('\nfinal:', final);
+
+  return writeCoverLetterPDF({final});
+};
+
+
+
 
 
 const pdfEndpoint = new EndpointsFactory(
@@ -112,7 +165,6 @@ const job = defaultEndpointsFactory.build({
   output: z.object({ text: z.string() }),
   handler: async ({ input: { url } }) => {
     const jobListing = await fetchListing(url);
-    console.log('jobListing:', jobListing);
     return { text: (jobListing) };
   },
 });
@@ -151,7 +203,8 @@ const coverLetterEndpoint = pdfEndpoint.build({
   input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
   output: z.object({ file: z.instanceof(Buffer) }),
   handler: async ({ input: { name, jobUrl }}): Promise<{ file: Buffer }> => {
-    const pdfBuffer = await generateLetter({ url: jobUrl });
+    const pdfBuffer = await geminiGenerate({ url: jobUrl });
+    // const pdfBuffer = await generateLetter({ url: jobUrl });
     const file = renderToBuffer(pdfBuffer);
     return { file: await file };
   },
