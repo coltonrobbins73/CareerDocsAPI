@@ -138,8 +138,14 @@ paths:
                   type: string
                 jobUrl:
                   type: string
+                model:
+                  type: string
+                  enum:
+                    - gpt
+                    - gemini
               required:
                 - jobUrl
+                - model
       responses:
         "200":
           description: POST /cover Positive response

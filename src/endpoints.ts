@@ -9,7 +9,7 @@ import { google } from 'googleapis';
 import dotenv from 'dotenv';
 import {GPT} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-import { generatePDFDocument, writeCoverLetterPDF } from '../utils/writePDF';
+import { generatePDFDocument, writeCoverLetterPDF, extractResumeSummary, ContactInfo} from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
@@ -31,7 +31,7 @@ const coverLetterWriterPersona : string = `You are an expert cover letter writer
 comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
-const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
+const resume : string = StringifyPdf("public/secure/Ivan Pedroza Resume.pdf");
 
 const generateLetter = async ({url}: {url: string}) => {
   const jobListing = await fetchListing(url);
@@ -49,6 +49,7 @@ const generateLetter = async ({url}: {url: string}) => {
       ])
   ]);
 
+  console.log('\n\Resume details:', resumeSummary);
 
   const hook = await GPT([
       { role: "system", content: coverLetterWriterPersona },
@@ -75,9 +76,13 @@ const generateLetter = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
+  console.log('\n\nModel:', process.env.GEMINI_MODEL);
   console.log('\nfinal:', final);
 
-  return writeCoverLetterPDF({final});
+  const extractedContactInfo = extractResumeSummary(resumeSummary);
+  console.log(extractedContactInfo);
+
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
 };
 
 
@@ -97,6 +102,7 @@ const geminiGenerate = async ({url}: {url: string}) => {
       ])
   ]);
 
+  console.log('\n\Resume details:', resumeSummary);
 
   const hook = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
@@ -123,13 +129,14 @@ const geminiGenerate = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
   ]);
 
+  console.log('\n\nModel:', process.env.GEMINI_MODEL);
   console.log('\nfinal:', final);
 
-  return writeCoverLetterPDF({final});
+  const extractedContactInfo = extractResumeSummary(resumeSummary);
+  console.log(extractedContactInfo);
+
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
 };
-
-
-
 
 
 const pdfEndpoint = new EndpointsFactory(
@@ -169,7 +176,7 @@ const job = defaultEndpointsFactory.build({
   },
 });
 
-// Endpoint to fetch resume
+// Endpoint to fetch job listing
 const test = pdfEndpoint.build({
   shortDescription: "fetches job listing",
   description: 'retrieves text from job listing',
@@ -191,7 +198,7 @@ const resumeEndpoint = pdfEndpoint.build({
   input: z.object({ name: z.string().optional() }),
   output: z.object({ filename: z.string() }),
   handler: async ({ input: { name }, logger }) => {
-    const filePath = `public/Ivan Pedroza Resume.pdf`;
+    const filePath = `public/secure/Ivan Pedroza Resume.pdf`;
     return { filename: filePath };
   },
 });
@@ -200,15 +207,30 @@ const coverLetterEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches cover letter files",
   description: 'Retrieves most up-to-date general cover letter',
   method: 'post',
-  input: z.object({ name: z.string().optional(), jobUrl: z.string() }),
+  input: z.object({
+    name: z.string().optional(),
+    jobUrl: z.string(),
+    model: z.enum(['gpt', 'gemini']) // Add model choice
+  }),  
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl }}): Promise<{ file: Buffer }> => {
-    const pdfBuffer = await geminiGenerate({ url: jobUrl });
-    // const pdfBuffer = await generateLetter({ url: jobUrl });
-    const file = renderToBuffer(pdfBuffer);
-    return { file: await file };
+  handler: async ({ input: { name, jobUrl, model } }): Promise<{ file: Buffer }> => {
+    let pdfDocument: React.ReactElement<ReactPDF.DocumentProps> | undefined;
+    if (model === 'gemini') {
+      pdfDocument = await geminiGenerate({ url: jobUrl });
+    } else if (model === 'gpt') {
+      pdfDocument = await generateLetter({ url: jobUrl });
+    }
+
+    if (!pdfDocument) {
+      throw new Error('Failed to generate PDF document');
+    }
+
+    const file = await renderToBuffer(pdfDocument);
+    return { file };
   },
 });
+
+
 
 export const appRouter: Routing = {
   job: job,
