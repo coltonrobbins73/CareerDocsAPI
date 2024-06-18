@@ -66,7 +66,22 @@ app.use(express.json());
 attachRouting(config, appRouter);
 
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
+const Shutdown = () => {
+    console.log('Received shutdown signal, shutting down gracefully...');
+    server.close(() => {
+        console.log('Closed out remaining connections.');
+        process.exit();
+    });
+
+    setTimeout(() => {
+        console.error('Forcing shutdown as connections are taking too long to close.');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGINT', Shutdown);
+process.on('SIGTERM', Shutdown);

@@ -31,7 +31,7 @@ const coverLetterWriterPersona : string = `You are an expert cover letter writer
 comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
-const resume : string = StringifyPdf("public/secure/Ivan Pedroza Resume.pdf");
+const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
 
 const generateLetter = async ({url}: {url: string}) => {
   const jobListing = await fetchListing(url);
@@ -210,7 +210,7 @@ const coverLetterEndpoint = pdfEndpoint.build({
   input: z.object({
     name: z.string().optional(),
     jobUrl: z.string(),
-    model: z.enum(['gpt', 'gemini']) // Add model choice
+    model: z.enum(['gpt', 'gemini'])
   }),  
   output: z.object({ file: z.instanceof(Buffer) }),
   handler: async ({ input: { name, jobUrl, model } }): Promise<{ file: Buffer }> => {
