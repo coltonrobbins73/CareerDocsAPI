@@ -13,5 +13,6 @@ export const generateFinalPrompt = (resumeSummary: string, hook: string, body: s
 
     expected_output:
     A finalized and truthful cover letter.
+    Only output the raw text response.
     Do not include explanations, reasoning, or additional commentary.
 `);

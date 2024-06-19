@@ -6,10 +6,11 @@ import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFac
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
 import { google } from 'googleapis';
 
+
 import dotenv from 'dotenv';
 import {GPT} from '../models/OpenAIClient';
 import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-import { generatePDFDocument, writeCoverLetterPDF, extractResumeSummary, ContactInfo} from '../utils/writePDF';
+import { generatePDFDocument, writeCoverLetterPDF, splitResumeSummary, extractContactInfo, ExtractedContactInfo} from '../utils/writePDF';
 import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
 import { generateResumePrompt } from '../prompts/resumePrompt';
 import { generateHookPrompt } from '../prompts/hookPrompt';
@@ -20,6 +21,7 @@ import { generateFinalPrompt } from '../prompts/truthPrompt';
 import ReactPDF, {renderToBuffer} from '@react-pdf/renderer';
 import {fetchListing} from '../utils/jobs';
 import {Gemini} from '../models/Gemini';
+import logger from '../utils/logger';
 
 dotenv.config();
 
@@ -49,40 +51,53 @@ const generateLetter = async ({url}: {url: string}) => {
       ])
   ]);
 
-  console.log('\n\Resume details:', resumeSummary);
+  logger.info("Original Resume Summary", { resumeSummary });
+
+  const resumeSplit = splitResumeSummary(resumeSummary);
+
+  let contactInfo: string = '';
+  let workExperience: string = '';
+
+  if (resumeSplit) {
+      [contactInfo, workExperience] = resumeSplit;
+      logger.info("Contact Information", { contactInfo });
+      logger.info("Work Experience", { workExperience });
+  } else {
+      logger.info("Keyword phrase not found in resume summary", { resumeSummary });
+  }
 
   const hook = await GPT([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
+      { role: "user", content: generateHookPrompt(workExperience, jobSummary) }
   ]);
 
   const body = await GPT([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
+      { role: "user", content: generateBodyPrompt(workExperience, jobSummary, hook) }
   ]);
 
-  const review = await GPT([
+  const revised_body = await GPT([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+      { role: "user", content: generateReviewPrompt(workExperience, jobSummary, body) }
   ]);
 
   const conclusion = await GPT([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateConclusionPrompt(hook, body) }
+      { role: "user", content: generateConclusionPrompt(hook, revised_body) }
   ]);
 
   const final = await GPT([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+      { role: "user", content: generateFinalPrompt(workExperience, hook, revised_body, conclusion) }
   ]);
 
-  console.log('\n\nModel:', process.env.GEMINI_MODEL);
-  console.log('\nfinal:', final);
+  logger.info('Model', { model: process.env.OPENAI_MODEL });
+  logger.info('Final', { final });
 
-  const extractedContactInfo = extractResumeSummary(resumeSummary);
-  console.log(extractedContactInfo);
+  const extractedContactInfoValues = extractContactInfo(contactInfo);
+  logger.info("Extracted Contact Information", { extractedContactInfoValues });
 
-  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfoValues});
 };
 
 
@@ -102,40 +117,53 @@ const geminiGenerate = async ({url}: {url: string}) => {
       ])
   ]);
 
-  console.log('\n\Resume details:', resumeSummary);
+  logger.info("Original Resume Summary", { resumeSummary });
+
+  const resumeSplit = splitResumeSummary(resumeSummary);
+
+  let contactInfo: string = '';
+  let workExperience: string = '';
+
+  if (resumeSplit) {
+      [contactInfo, workExperience] = resumeSplit;
+      logger.info("Contact Information", { contactInfo });
+      logger.info("Work Experience", { workExperience });
+  } else {
+      logger.info("Keyword phrase not found in resume summary", { resumeSummary });
+  }
 
   const hook = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateHookPrompt(resumeSummary, jobSummary) }
+      { role: "user", content: generateHookPrompt(workExperience, jobSummary) }
   ]);
 
   const body = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateBodyPrompt(resumeSummary, jobSummary, hook) }
+      { role: "user", content: generateBodyPrompt(workExperience, jobSummary, hook) }
   ]);
 
-  const review = await Gemini([
+  const revised_body = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateReviewPrompt(resumeSummary, jobSummary, body) }
+      { role: "user", content: generateReviewPrompt(workExperience, jobSummary, body) }
   ]);
 
   const conclusion = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateConclusionPrompt(hook, body) }
+      { role: "user", content: generateConclusionPrompt(hook, revised_body) }
   ]);
 
   const final = await Gemini([
       { role: "system", content: coverLetterWriterPersona },
-      { role: "user", content: generateFinalPrompt(resumeSummary, hook, body, conclusion) }
+      { role: "user", content: generateFinalPrompt(workExperience, hook, revised_body, conclusion) }
   ]);
 
-  console.log('\n\nModel:', process.env.GEMINI_MODEL);
-  console.log('\nfinal:', final);
+  logger.info('Model', { model: process.env.GEMINI_MODEL });
+  logger.info('Final', { final });
 
-  const extractedContactInfo = extractResumeSummary(resumeSummary);
-  console.log(extractedContactInfo);
+  const extractedContactInfoValues = extractContactInfo(contactInfo);
+  logger.info("Extracted Contact Information", { extractedContactInfoValues });
 
-  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfo});
+  return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfoValues});
 };
 
 
