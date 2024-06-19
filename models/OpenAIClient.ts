@@ -1,4 +1,5 @@
 import { OpenAI } from 'openai'; // Adjust the import according to your setup
+import { wrapOpenAI } from 'langsmith/wrappers'; // Import wrapOpenAI from Langsmith
 
 interface Message {
     role: string;
@@ -9,7 +10,7 @@ const config = {
     apiKey: process.env.OPENAI_API_KEY
 };
 
-const client = new OpenAI(config);
+const client = wrapOpenAI(new OpenAI(config));
 
 export const GPT = async (messages: Message[]): Promise<string> => {
 
@@ -30,6 +31,7 @@ export const GPT = async (messages: Message[]): Promise<string> => {
             throw new Error("Invalid response from OpenAI API");
         }
     } catch (error) {
+        // End the trace with an error
         console.error('Error making OpenAI API request:', error);
         throw error;
     }

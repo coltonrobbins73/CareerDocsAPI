@@ -20,4 +20,5 @@ export const generateHookPrompt = (resumeSummary: string, jobSummary: string) =>
     I've been looking for."
 
     Do not include explanations, reasoning, or additional commentary.
+    Only output the raw text response.
 `);

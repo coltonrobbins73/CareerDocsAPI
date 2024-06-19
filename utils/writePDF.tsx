@@ -122,8 +122,26 @@ function getCurrentFormattedDate(): string {
   return `${day} ${month} ${year}`;
 }
 
+export function splitResumeSummary(resumeSummary: string): [string, string] | null {
+  // Define a regular expression to match "Previous work experience" with some tolerance
+  const regex = /previous.*work.*experience/i;
 
-export interface ContactInfo {
+  // Find the index of the match
+  const match = resumeSummary.match(regex);
+  if (!match) {
+      // If no match is found, return null
+      return null;
+  }
+
+  // Split the resume summary at the match index
+  const splitIndex = match.index!;
+  const contactInfo = resumeSummary.substring(0, splitIndex).trim();
+  const workExperience = resumeSummary.substring(splitIndex).trim();
+
+  return [contactInfo, workExperience];
+}
+
+export interface ExtractedContactInfo {
   applicantName: string;
   applicantTitle: string;
   applicantEmail: string;
@@ -133,7 +151,7 @@ export interface ContactInfo {
   applicantPhone: string;
 }
 
-export function extractResumeSummary(resumeSummary: string): ContactInfo {
+export function extractContactInfo(contactInfo: string): ExtractedContactInfo {
   const fields = {
     applicantName: /"Applicant name":\s*"([^"]*)"/i,
     applicantTitle: /"Applicant title":\s*"([^"]*)"/i,
@@ -145,7 +163,7 @@ export function extractResumeSummary(resumeSummary: string): ContactInfo {
   };
 
   const extractField = (pattern: RegExp): string => {
-    const match = resumeSummary.match(pattern);
+    const match = contactInfo.match(pattern);
     return match && match[1] ? match[1] : "";
   };
 
@@ -214,7 +232,7 @@ export const writeCoverLetterPDF = ({
   contactInfo,
 }: {
   final: string;
-  contactInfo: ContactInfo;
+  contactInfo: ExtractedContactInfo;
 }) => (
   <Document>
     <Page size="A4" style={styles.page}>
