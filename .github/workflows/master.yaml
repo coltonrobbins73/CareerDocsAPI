@@ -41,13 +41,13 @@ jobs:
           script: |
 
             echo "Login to Docker Hub"
-            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+            sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
             echo "Pull new image"
-            docker-compose -f /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/docker-compose.deploy.yml pull
+            sudo docker-compose -f /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/docker-compose.deploy.yml pull
 
             echo "Restart the container"
-            docker-compose -f /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/docker-compose.deploy.yml --env-file /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/.env up --force-recreate --build --no-deps -d
+            sudo docker-compose -f /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/docker-compose.deploy.yml --env-file /home/${{ secrets.PRODUCTION_AWS_SSH_USERNAME }}/.env up --force-recreate --build --no-deps -d
 
             echo "Delete old image"
-            docker image prune -f
+            sudo docker image prune -f
