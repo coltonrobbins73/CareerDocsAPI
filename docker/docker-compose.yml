@@ -4,6 +4,7 @@ services:
   reverse-proxy:
     restart: unless-stopped
     image: traefik:v2.9
+    platform: linux/arm64
     command:
       - --api.insecure=true
       - --providers.docker
@@ -12,7 +13,6 @@ services:
       - --certificatesresolvers.letsencryptresolver.acme.email=ivan.k.pedroza@gmail.com
       - --certificatesresolvers.letsencryptresolver.acme.storage=/data/acme.json
       - --certificatesresolvers.letsencryptresolver.acme.tlschallenge=true
-      # - --certificatesresolvers.letsencryptresolver.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
     ports:
@@ -26,6 +26,7 @@ services:
   app:
     container_name: CareerDocumentsAPI
     image: ivanpedroza/career-docs-api:latest
+    platform: linux/arm64
     tty: true
     stdin_open: true
     restart: always
@@ -49,6 +50,7 @@ services:
 
   seq:
     image: datalust/seq:latest
+    platform: linux/arm64
     container_name: seqhc
     restart: unless-stopped
     volumes:
