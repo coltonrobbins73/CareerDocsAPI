@@ -4,7 +4,7 @@ services:
   reverse-proxy:
     restart: unless-stopped
     image: traefik:v2.9
-    platform: linux/unix
+    platform: linux/amd64
     command:
       - --api.insecure=true
       - --providers.docker
@@ -22,6 +22,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./acme.json:/data/acme.json
+    networks:
+      - web
 
   app:
     container_name: CareerDocumentsAPI
@@ -32,20 +34,21 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - SEQ_SERVER
-      - SEQ_API_KEY
-      - NODE_ENV
-      - OPENAI_MODEL
-      - OPENAI_API_KEY
-      - GEMINI_API_KEY
-      - GEMINI_MODEL
-
+      - SEQ_SERVER=${SEQ_SERVER}
+      - SEQ_API_KEY=${SEQ_API_KEY}
+      - NODE_ENV=${NODE_ENV}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL}
     labels:
       - "traefik.http.routers.app.rule=Host(`ec2-54-245-170-196.us-west-2.compute.amazonaws.com`)"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=letsencryptresolver"
     depends_on:
       - seq
+    networks:
+      - web
 
   seq:
     image: datalust/seq:latest
@@ -61,7 +64,12 @@ services:
       - "traefik.http.routers.seq.rule=Host(`ec2-35-95-46-69.us-west-2.compute.amazonaws.com`)"
       - "traefik.http.routers.seq.tls=true"
       - "traefik.http.routers.seq.tls.certresolver=letsencryptresolver"
+    networks:
+      - web
 
 volumes:
   seqhc_data:
   acme:
+
+networks:
+  web:
