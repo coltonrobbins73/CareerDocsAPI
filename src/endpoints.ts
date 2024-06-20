@@ -201,7 +201,7 @@ const job = defaultEndpointsFactory.build({
 });
 
 // Endpoint to fetch job listing
-const test = pdfEndpoint.build({
+const test = defaultEndpointsFactory.build({
   shortDescription: "fetches job listing",
   description: 'retrieves text from job listing',
   method: 'get',
