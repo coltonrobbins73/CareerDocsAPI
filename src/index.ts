@@ -40,7 +40,7 @@ const options = {
             description: "A simple Express Library API to serve resume and cover letter files.",
         },
         servers: [{
-            url: "ec2-user@ec2-35-95-46-69.us-west-2.compute.amazonaws.com" //`http://localhost:${PORT}`,
+            url: `ec2-user@ec2-35-95-46-69.us-west-2.compute.amazonaws.com:${PORT}` //`http://localhost:${PORT}`,
         }],
     },
     apis: ["./API_Documentation.yaml"],
