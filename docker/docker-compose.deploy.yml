@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.8"
 
 services:
   reverse-proxy:
@@ -26,7 +26,7 @@ services:
   app:
     container_name: CareerDocumentsAPI
     image: ivanpedroza/career-docs-api:latest
-    platform: linux/arm64
+    platform: linux/amd64
     tty: true
     stdin_open: true
     restart: always
@@ -50,7 +50,7 @@ services:
 
   seq:
     image: datalust/seq:latest
-    platform: linux/unix
+    platform: linux/amd64
     container_name: seqhc
     restart: unless-stopped
     volumes:
