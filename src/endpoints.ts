@@ -1,29 +1,24 @@
 import { z } from 'zod';
-import fs from 'fs';
-import url from 'url';
-import path from 'path'; // Import the path module
 import { Routing, defaultEndpointsFactory, createResultHandler, ez, EndpointsFactory } from 'express-zod-api';
 import { oauth2Client, authorizeUrl, verifyJWT, generateJWT } from './googleAuth';
-import { google } from 'googleapis';
-
-
-import dotenv from 'dotenv';
-import {GPT} from '../models/OpenAIClient';
-import {StringifyTxt, StringifyPdf} from '../utils/DocumentLoader';
-import { generatePDFDocument, writeCoverLetterPDF, splitResumeSummary, extractContactInfo, ExtractedContactInfo} from '../utils/writePDF';
-import { generateJobListingPrompt } from '../prompts/jobListingPrompt';
-import { generateResumePrompt } from '../prompts/resumePrompt';
-import { generateHookPrompt } from '../prompts/hookPrompt';
-import { generateBodyPrompt } from '../prompts/bodyPrompt';
-import { generateReviewPrompt } from '../prompts/reviewPrompt';
-import { generateConclusionPrompt } from '../prompts/conclusionPrompt';
-import { generateFinalPrompt } from '../prompts/truthPrompt';
+import {GPT} from './models/OpenAIClient';
+import {StringifyTxt, StringifyPdf} from './utils/DocumentLoader';
+import { generatePDFDocument, writeCoverLetterPDF, splitResumeSummary, extractContactInfo, ExtractedContactInfo} from './utils/writePDF';
+import { generateJobListingPrompt } from './prompts/jobListingPrompt';
+import { generateResumePrompt } from './prompts/resumePrompt';
+import { generateHookPrompt } from './prompts/hookPrompt';
+import { generateBodyPrompt } from './prompts/bodyPrompt';
+import { generateReviewPrompt } from './prompts/reviewPrompt';
+import { generateConclusionPrompt } from './prompts/conclusionPrompt';
+import { generateFinalPrompt } from './prompts/truthPrompt';
 import ReactPDF, {renderToBuffer} from '@react-pdf/renderer';
-import {fetchListing} from '../utils/jobs';
-import {Gemini} from '../models/Gemini';
-import logger from '../utils/logger';
+import {fetchListing} from './utils/jobs';
+import {Gemini} from './models/Gemini';
+import {loggerFactory} from './utils/logger';
 
-dotenv.config();
+
+const parentLogger = loggerFactory();
+const createLogger = () => parentLogger.child({ correlationId: crypto.randomUUID() });
 
 // --- Persona Definitions ---
 const talentAcquisitionExpertPersona : string = `You are an expert in talent acquisition \
@@ -33,9 +28,10 @@ const coverLetterWriterPersona : string = `You are an expert cover letter writer
 comprehensive understanding of Applicant Tracking Systems (ATS) and keyword optimization.`;
 
 
-const resume : string = StringifyPdf("public/Ivan Pedroza Resume.pdf");
+const resume : string = StringifyPdf("src/public/Ivan Pedroza Resume.pdf");
 
 const generateLetter = async ({url}: {url: string}) => {
+
   const jobListing = await fetchListing(url);
   const jobListingPrompt = generateJobListingPrompt(jobListing);
 
@@ -51,7 +47,7 @@ const generateLetter = async ({url}: {url: string}) => {
       ])
   ]);
 
-  logger.info("Original Resume Summary", { resumeSummary });
+  // logger\.info("Original Resume Summary", { resumeSummary });
 
   const resumeSplit = splitResumeSummary(resumeSummary);
 
@@ -60,10 +56,10 @@ const generateLetter = async ({url}: {url: string}) => {
 
   if (resumeSplit) {
       [contactInfo, workExperience] = resumeSplit;
-      logger.info("Contact Information", { contactInfo });
-      logger.info("Work Experience", { workExperience });
+      // logger\.info("Contact Information", { contactInfo });
+      // logger\.info("Work Experience", { workExperience });
   } else {
-      logger.info("Keyword phrase not found in resume summary", { resumeSummary });
+      // logger\.info("Keyword phrase not found in resume summary", { resumeSummary });
   }
 
   const hook = await GPT([
@@ -91,11 +87,11 @@ const generateLetter = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(workExperience, hook, revised_body, conclusion) }
   ]);
 
-  logger.info('Model', { model: process.env.OPENAI_MODEL });
-  logger.info('Final', { final });
+  // logger\.info('Model', { model: process.env.OPENAI_MODEL });
+  // logger\.info('Final', { final });
 
   const extractedContactInfoValues = extractContactInfo(contactInfo);
-  logger.info("Extracted Contact Information", { extractedContactInfoValues });
+  // logger\.info("Extracted Contact Information", { extractedContactInfoValues });
 
   return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfoValues});
 };
@@ -117,7 +113,7 @@ const geminiGenerate = async ({url}: {url: string}) => {
       ])
   ]);
 
-  logger.info("Original Resume Summary", { resumeSummary });
+  // logger\.info("Original Resume Summary", { resumeSummary });
 
   const resumeSplit = splitResumeSummary(resumeSummary);
 
@@ -126,10 +122,10 @@ const geminiGenerate = async ({url}: {url: string}) => {
 
   if (resumeSplit) {
       [contactInfo, workExperience] = resumeSplit;
-      logger.info("Contact Information", { contactInfo });
-      logger.info("Work Experience", { workExperience });
+      // logger\.info("Contact Information", { contactInfo });
+      // logger\.info("Work Experience", { workExperience });
   } else {
-      logger.info("Keyword phrase not found in resume summary", { resumeSummary });
+      // logger\.info("Keyword phrase not found in resume summary", { resumeSummary });
   }
 
   const hook = await Gemini([
@@ -157,11 +153,11 @@ const geminiGenerate = async ({url}: {url: string}) => {
       { role: "user", content: generateFinalPrompt(workExperience, hook, revised_body, conclusion) }
   ]);
 
-  logger.info('Model', { model: process.env.GEMINI_MODEL });
-  logger.info('Final', { final });
+  // logger\.info('Model', { model: process.env.GEMINI_MODEL });
+  // logger\.info('Final', { final });
 
   const extractedContactInfoValues = extractContactInfo(contactInfo);
-  logger.info("Extracted Contact Information", { extractedContactInfoValues });
+  // logger\.info("Extracted Contact Information", { extractedContactInfoValues });
 
   return writeCoverLetterPDF({final: final, contactInfo: extractedContactInfoValues});
 };
@@ -236,12 +232,14 @@ const coverLetterEndpoint = pdfEndpoint.build({
   description: 'Retrieves most up-to-date general cover letter',
   method: 'post',
   input: z.object({
-    name: z.string().optional(),
     jobUrl: z.string(),
     model: z.enum(['gpt', 'gemini'])
   }),  
   output: z.object({ file: z.instanceof(Buffer) }),
-  handler: async ({ input: { name, jobUrl, model } }): Promise<{ file: Buffer }> => {
+  handler: async ({ input} ): Promise<{ file: Buffer }> => {
+    const { jobUrl, model } = input;
+    const logger = createLogger().child({ endpoint: "/cover" });
+    logger.info("Endpoint called: /cover", { data: JSON.stringify(input) });
     let pdfDocument: React.ReactElement<ReactPDF.DocumentProps> | undefined;
     if (model === 'gemini') {
       pdfDocument = await geminiGenerate({ url: jobUrl });
@@ -250,6 +248,7 @@ const coverLetterEndpoint = pdfEndpoint.build({
     }
 
     if (!pdfDocument) {
+      logger.error("Failed to generate PDF document");
       throw new Error('Failed to generate PDF document');
     }
 

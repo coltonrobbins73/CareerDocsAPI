@@ -31,28 +31,16 @@ const config: AppConfig<string> = {
 //   });
 //   client.connect();
 
-// Generate documentation in YAML format and save it
-const yamlString = new Documentation({
-    routing: appRouter,
-    config,
-    version: "1.0.0",
-    title: "Document Service API",
-    serverUrl: `http://localhost:${PORT}`,
-    composition: "inline",
-  }).getSpecAsYaml();
-
-fs.writeFileSync('API_Documentation.yaml', yamlString);
-
 const options = {
     definition: {
         openapi: "3.0.0",
         info: {
-            title: "Job Document Service API",
+            title: "Career Documents API",
             version: "1.0.0",
             description: "A simple Express Library API to serve resume and cover letter files.",
         },
         servers: [{
-            url: `http://localhost:${PORT}`,
+            url: "ec2-user@ec2-35-95-46-69.us-west-2.compute.amazonaws.com" //`http://localhost:${PORT}`,
         }],
     },
     apis: ["./API_Documentation.yaml"],
