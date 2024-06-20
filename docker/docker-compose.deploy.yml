@@ -26,7 +26,6 @@ services:
   app:
     container_name: CareerDocumentsAPI
     image: ivanpedroza/career-docs-api:latest
-    platform: linux/unix
     tty: true
     stdin_open: true
     restart: always
@@ -42,7 +41,7 @@ services:
       - GEMINI_MODEL
 
     labels:
-      - "traefik.http.routers.app.rule=Host(`ec2-35-95-46-69.us-west-2.compute.amazonaws.com`)"
+      - "traefik.http.routers.app.rule=Host(`ec2-54-245-170-196.us-west-2.compute.amazonaws.com`)"
       - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=letsencryptresolver"
     depends_on:
@@ -50,7 +49,6 @@ services:
 
   seq:
     image: datalust/seq:latest
-    platform: linux/unix
     container_name: seqhc
     restart: unless-stopped
     volumes:
