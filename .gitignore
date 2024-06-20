@@ -35,6 +35,7 @@ bower_components/
 # IDE files
 .idea/
 .vscode/
+.pem
 
 # Optional npm cache directory
 .npm/

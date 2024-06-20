@@ -50,7 +50,7 @@ services:
 
   seq:
     image: datalust/seq:latest
-    platform: linux/arm64
+    platform: linux/unix
     container_name: seqhc
     restart: unless-stopped
     volumes:
