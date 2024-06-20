@@ -28,7 +28,7 @@ jobs:
 
   deploy:
     name: Deploy to Server (AWS EC2)
-    runs-on: linux/unix
+    runs-on: ubuntu-latest   
     needs: [build]
 
     steps:
