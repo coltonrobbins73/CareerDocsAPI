@@ -2,7 +2,7 @@ services:
   reverse-proxy:
     restart: unless-stopped
     image: traefik:v2.9
-    platform: linux/amd64
+    platform: linux/unix
     command:
       - --api.insecure=true
       - --providers.docker
