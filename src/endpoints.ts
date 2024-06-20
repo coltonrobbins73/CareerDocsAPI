@@ -204,11 +204,11 @@ const job = defaultEndpointsFactory.build({
 const test = pdfEndpoint.build({
   shortDescription: "fetches job listing",
   description: 'retrieves text from job listing',
-  method: 'post',
-  input: z.object({ jobUrl: z.string()}),
+  method: 'get',
+  input: z.object({}),
   output: z.object({ text: z.string() }),
-  handler: async ({ input: { jobUrl } }) => {
-    return { text: "" };
+  handler: async () => {
+    return { text: "Hello World!" };
   },
 });
 

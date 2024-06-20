@@ -11,13 +11,14 @@ import { google } from 'googleapis';
 import url from 'url';
 import { Client } from 'pg';
 
+
 const app = express();
 const PORT = 3000;
 
 const config: AppConfig<string> = {
     app,
     cors: true,
-    logger: { level: 'debug', color: true },
+    logger: {level: 'debug', color: true},
 };
 
 // PostgreSQL Client Setup
@@ -27,8 +28,8 @@ const config: AppConfig<string> = {
 //     database: 'jobtracker',
 //     password: 'yourpassword',
 //     port: 5432,
-// });
-// client.connect();
+//   });
+//   client.connect();
 
 const options = {
     definition: {
@@ -39,7 +40,7 @@ const options = {
             description: "A simple Express Library API to serve resume and cover letter files.",
         },
         servers: [{
-            url: `http://ec2-35-95-46-69.us-west-2.compute.amazonaws.com:${PORT}` // Use the correct HTTP URL
+            url: `http://ec2-user@ec2-35-95-46-69.us-west-2.compute.amazonaws.com:${PORT}` //`http://localhost:${PORT}`,
         }],
     },
     apis: ["./API_Documentation.yaml"],
@@ -52,7 +53,8 @@ app.use(express.json());
 
 attachRouting(config, appRouter);
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
