@@ -1,15 +1,14 @@
-import { OpenAI } from 'openai'; // Adjust the import according to your setup
-import { wrapOpenAI } from 'langsmith/wrappers'; // Import wrapOpenAI from Langsmith
+import { OpenAI } from 'openai'; 
+import { wrapOpenAI } from 'langsmith/wrappers'; 
 
 interface Message {
     role: string;
     content: string;
 }
 
-const client = wrapOpenAI(new OpenAI({ apiKey: process.env.OPENAI_API_KEY! || ''}));
+const client = wrapOpenAI(new OpenAI({ apiKey: process.env.OPENAI_API_KEY! || '' }));
 
 export const GPT = async (messages: Message[]): Promise<string> => {
-
     const chatMessages: any = messages.map((message) => ({
         role: message.role,
         content: message.content,
@@ -27,8 +26,8 @@ export const GPT = async (messages: Message[]): Promise<string> => {
             throw new Error("Invalid response from OpenAI API");
         }
     } catch (error) {
-        // End the trace with an error
         console.error('Error making OpenAI API request:', error);
-        throw error;
+        
+        throw new Error('Failed to generate content with OpenAI API');
     }
 };
