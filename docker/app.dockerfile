@@ -1,20 +1,15 @@
-FROM node:22-alpine3.18 AS build
+FROM node:22
 
-WORKDIR ./
+WORKDIR /app
 
-COPY package*.json ./
-COPY tsconfig*.json ./
-COPY ./src ./src
+COPY package*.json /app
+COPY tsconfig*.json /app
+COPY ./src /app/src
 
 RUN npm ci && npm run build
 
-FROM node:22-alpine3.18 AS final
 
-ENV NODE_ENV=production
 
-COPY --from=build ./dist ./dist
-COPY package*.json ./
+EXPOSE 3000
 
-RUN npm ci --production
-
-CMD [ "npm", "run", "start:prod" ]
+CMD ["npm", "run", "start:prod"]
