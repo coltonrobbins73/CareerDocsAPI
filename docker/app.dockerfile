@@ -1,4 +1,4 @@
-FROM node:22
+FROM node:22-slim
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN npm ci && npm run build
 
 
 
-EXPOSE 3000
+EXPOSE 3000 5341
 
 CMD ["npm", "run", "start:prod"]
 

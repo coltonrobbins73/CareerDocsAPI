@@ -209,20 +209,6 @@ const test = defaultEndpointsFactory.build({
 });
 
 
-
-// Endpoint to fetch resume
-// const resumeEndpoint = pdfEndpoint.build({
-//   shortDescription: "Fetches resume files",
-//   description: 'Retrieves most up-to-date resume',
-//   method: 'post',
-//   input: z.object({ name: z.string().optional() }),
-//   output: z.object({ filename: z.string() }),
-//   handler: async ({ input: { name }, logger }) => {
-//     const filePath = `public/secure/Ivan Pedroza Resume.pdf`;
-//     return { filename: filePath };
-//   },
-// });
-
 const coverLetterEndpoint = pdfEndpoint.build({
   shortDescription: "Fetches cover letter files",
   description: 'Retrieves most up-to-date general cover letter',
