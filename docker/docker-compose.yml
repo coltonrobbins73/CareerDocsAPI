@@ -1,7 +1,7 @@
 name: career-docs-api
 services:
   app:
-    image: coltonrobbins73/career-docs-api:2.0.0
+    image: coltonrobbins73/career-docs-api:2.0.1
     container_name: CareerDocumentsAPI
     restart: always
     ports:

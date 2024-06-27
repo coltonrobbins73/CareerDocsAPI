@@ -32,7 +32,7 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment_package
-          cp docker-compose.yaml deployment_package/
+          cp docker-compose.yml deployment_package/
           cp appspec.yml deployment_package/
           cp scripts/* deployment_package/
           cd deployment_package && zip -r ../deploy.zip .
